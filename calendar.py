@@ -12,7 +12,7 @@ from homeassistant.util import dt as dt_util
 
 from .entity import SvitloEntity
 from .runtime import SvitloRuntime
-from .schedule import DaySchedule, diff_snapshots
+from .schedule import DaySchedule, diff_snapshots, ongoing_end
 from .texts import fmt_duration, fmt_ranges, texts
 
 PARALLEL_UPDATES = 0
@@ -148,7 +148,7 @@ class ActualOutagesCalendar(BaseCalendar):
         now = dt_util.utcnow()
         events: list[CalendarEvent] = []
         for outage in self.runtime.power.machine.outages:
-            finish = outage.end or now
+            finish = outage.end or ongoing_end(outage.start, now)
             if finish <= outage.start:
                 finish = outage.start + timedelta(minutes=1)
             if finish <= start or outage.start >= end:

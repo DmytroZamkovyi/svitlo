@@ -243,6 +243,18 @@ def next_power_on(snap: Snapshot | None, now: datetime, tz: tzinfo) -> datetime 
     return next((iv.end for iv in snap.outage_intervals(tz) if iv.end > now), None)
 
 
+def ongoing_end(start: datetime, now: datetime) -> datetime:
+    """End shown in the calendar for an outage that is still going on.
+
+    Never `now` itself: Home Assistant's calendar entity schedules a state write
+    at the end of the current event, so an end equal to "now" fires again at once
+    and the entity rewrites its state in a hot loop. The next whole minute keeps
+    the event growing once a minute instead.
+    """
+    end = now.replace(second=0, microsecond=0) + timedelta(minutes=1)
+    return max(end, start + timedelta(minutes=1))
+
+
 def next_boundary(snap: Snapshot | None, now: datetime, tz: tzinfo) -> datetime:
     """Next moment when the scheduled state may change (slot edge or midnight)."""
     local = now.astimezone(tz)
