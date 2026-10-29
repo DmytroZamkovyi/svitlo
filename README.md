@@ -1,13 +1,18 @@
 # Svitlo
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=DmytroZamkovyi&repository=svitlo&category=integration)
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=svitlo)
+
+[Українською](README.uk.md)
+
 Home Assistant integration for Ukrainian power outages: the Yasno outage schedule for your address, the real power state from your own template, detailed statistics (actual vs schedule) and three read-only calendars.
 
 Everything is configured in the UI. No YAML, no custom cards.
 
 ## Install (HACS custom repository)
-1. HACS → three dots → Custom repositories → add this repository, category **Integration**.
+1. Click the first button above, or in HACS → three dots → Custom repositories → add this repository, category **Integration**.
 2. Download **Svitlo**, restart Home Assistant.
-3. Settings → Devices & services → Add integration → **Svitlo**.
+3. Click the second button above, or Settings → Devices & services → Add integration → **Svitlo**.
 
 ## Setup
 1. Region → operator (DSO) → street search → house search. The group is detected automatically.
