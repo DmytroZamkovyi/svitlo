@@ -24,9 +24,9 @@ Reconfigure: change the address.
 Street/house IDs and the group change in Yasno over time, so they are re-resolved by the saved names periodically.
 
 ## Entities
-- **Yasno** device: scheduled status, next outage, next power on, group, schedule updated, probable outages, scheduled outage (binary), changes (event: group changed, schedule changed, power lost, power restored), calendars "Current schedule" (today and tomorrow only) and "Schedule history" (final slots per day plus a marker for every schedule change).
+- **Yasno** device: scheduled status, next outage, next power on, group, schedule updated, probable outages, scheduled outage (binary), tomorrow's schedule published (binary), today/tomorrow planned time with and without power, planned outage count and longest planned outage, scheduled outage time left today, changes (event: group changed, schedule changed, power lost, power restored), calendars "Current schedule" (today and tomorrow only) and "Schedule history" (final slots per day plus a marker for every schedule change).
 - **Power** device: power (binary), last state change, current state duration, calendar "Actual outages".
-- **Statistics** devices (today, yesterday, 7 days, 30 days, all time): actual and scheduled outage share, count, durations, planned time that happened, actual time that was planned, unplanned outages, planned outages that did not happen, power-off/on deviation from the schedule (negative = earlier; median/min/max in attributes), average power-off/on time.
+- **Statistics** devices (today, yesterday, 7 days, 30 days, all time): actual and scheduled outage share, count, durations, planned time that happened, actual time that was planned, unplanned outages, planned outages that did not happen, power-off/on deviation from the schedule (negative = earlier; median/min/max in attributes), average power-off/on time, time with power, scheduled time with and without power, scheduled outage count, actual minus scheduled outage time, schedule changes, average publish time of tomorrow's schedule.
 
 Calendar events have stable `uid`s, so another tool can mirror them to an external calendar.
 

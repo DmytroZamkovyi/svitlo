@@ -25,6 +25,7 @@ from .runtime import SvitloRuntime
 from .schedule import (
     STATES,
     current_state,
+    day_summary,
     next_outage_start,
     next_power_on,
     timeline,
@@ -48,6 +49,7 @@ async def async_setup_entry(
         GroupSensor(runtime),
         ScheduleUpdatedSensor(runtime),
         ProbableSensor(runtime),
+        *[DaySensor(runtime, d) for d in DAY_DESCRIPTIONS],
         LastChangeSensor(runtime),
         StateDurationSensor(runtime),
     ]
@@ -163,6 +165,80 @@ class ProbableSensor(YasnoSensor):
         return {"slots": data.probable if data and data.probable else []}
 
 
+_MIN = UnitOfTime.MINUTES
+_PCT = {
+    "native_unit_of_measurement": PERCENTAGE,
+    "state_class": SensorStateClass.MEASUREMENT,
+    "suggested_display_precision": 1,
+}
+_DUR = {
+    "device_class": SensorDeviceClass.DURATION,
+    "native_unit_of_measurement": _MIN,
+    "suggested_unit_of_measurement": UnitOfTime.HOURS,
+    "state_class": SensorStateClass.MEASUREMENT,
+    "suggested_display_precision": 1,
+}
+_CNT = {"state_class": SensorStateClass.MEASUREMENT}
+_DEV = {
+    "native_unit_of_measurement": _MIN,
+    "state_class": SensorStateClass.MEASUREMENT,
+    "suggested_display_precision": 1,
+}
+_OFF = {"entity_registry_enabled_default": False}
+
+
+@dataclass(frozen=True, kw_only=True)
+class DayDescription(SensorEntityDescription):
+    tomorrow: bool
+    field: str
+
+
+DAY_DESCRIPTIONS = [
+    DayDescription(
+        key=f"{prefix}_planned_{name}",
+        translation_key=f"{prefix}_planned_{name}",
+        tomorrow=prefix == "tomorrow",
+        field=field,
+        **extra,
+    )
+    for prefix in ("today", "tomorrow")
+    for name, field, extra in (
+        ("outage", "outage", _DUR),
+        ("power", "power", _DUR),
+        ("outage_count", "count", _CNT),
+        ("longest_outage", "longest", _DUR),
+        ("possible_outage", "possible", {**_DUR, **_OFF}),
+    )
+] + [
+    DayDescription(
+        key="today_planned_outage_remaining",
+        translation_key="today_planned_outage_remaining",
+        tomorrow=False,
+        field="remaining",
+        **_DUR,
+    ),
+]
+
+
+class DaySensor(YasnoSensor):
+    """Planned figures for today or tomorrow from the current schedule."""
+
+    entity_description: DayDescription
+
+    def __init__(self, runtime: SvitloRuntime, description: DayDescription) -> None:
+        super().__init__(runtime, description.key)
+        self.entity_description = description
+
+    @property
+    def native_value(self) -> float | int | None:
+        now = dt_util.utcnow()
+        day = now.astimezone(self.runtime.tz).date()
+        if self.entity_description.tomorrow:
+            day += timedelta(days=1)
+        summary = day_summary(self._snapshot, day, self.runtime.tz, now)
+        return summary[self.entity_description.field] if summary else None
+
+
 # ------------------------------------------------------------------------ power
 class PowerSensor(SvitloEntity, SensorEntity):
     def __init__(self, runtime: SvitloRuntime, key: str) -> None:
@@ -216,93 +292,33 @@ def _d(key: str, **kw: Any) -> StatDescription:
     return StatDescription(key=key, translation_key=key, **kw)
 
 
-_MIN = UnitOfTime.MINUTES
 STAT_DESCRIPTIONS: dict[str, StatDescription] = {
     d.key: d
     for d in [
-        _d(
-            "actual_outage_percent",
-            native_unit_of_measurement=PERCENTAGE,
-            state_class=SensorStateClass.MEASUREMENT,
-            suggested_display_precision=1,
-        ),
-        _d(
-            "scheduled_outage_percent",
-            native_unit_of_measurement=PERCENTAGE,
-            state_class=SensorStateClass.MEASUREMENT,
-            suggested_display_precision=1,
-        ),
-        _d("outage_count", state_class=SensorStateClass.MEASUREMENT),
-        _d(
-            "outage_duration",
-            device_class=SensorDeviceClass.DURATION,
-            native_unit_of_measurement=_MIN,
-            state_class=SensorStateClass.MEASUREMENT,
-            suggested_display_precision=0,
-        ),
-        _d(
-            "avg_outage_duration",
-            device_class=SensorDeviceClass.DURATION,
-            native_unit_of_measurement=_MIN,
-            state_class=SensorStateClass.MEASUREMENT,
-            suggested_display_precision=0,
-            entity_registry_enabled_default=False,
-        ),
-        _d(
-            "longest_outage",
-            device_class=SensorDeviceClass.DURATION,
-            native_unit_of_measurement=_MIN,
-            state_class=SensorStateClass.MEASUREMENT,
-            suggested_display_precision=0,
-        ),
-        _d(
-            "longest_uptime",
-            device_class=SensorDeviceClass.DURATION,
-            native_unit_of_measurement=_MIN,
-            state_class=SensorStateClass.MEASUREMENT,
-            suggested_display_precision=0,
-        ),
-        _d(
-            "planned_realized_percent",
-            native_unit_of_measurement=PERCENTAGE,
-            state_class=SensorStateClass.MEASUREMENT,
-            suggested_display_precision=1,
-        ),
-        _d(
-            "outage_planned_percent",
-            native_unit_of_measurement=PERCENTAGE,
-            state_class=SensorStateClass.MEASUREMENT,
-            suggested_display_precision=1,
-        ),
-        _d(
-            "matched_count",
-            state_class=SensorStateClass.MEASUREMENT,
-            entity_registry_enabled_default=False,
-        ),
-        _d("unplanned_count", state_class=SensorStateClass.MEASUREMENT),
-        _d(
-            "unplanned_duration",
-            device_class=SensorDeviceClass.DURATION,
-            native_unit_of_measurement=_MIN,
-            state_class=SensorStateClass.MEASUREMENT,
-            suggested_display_precision=0,
-            entity_registry_enabled_default=False,
-        ),
-        _d("skipped_planned_count", state_class=SensorStateClass.MEASUREMENT),
-        _d(
-            "avg_start_deviation",
-            native_unit_of_measurement=_MIN,
-            state_class=SensorStateClass.MEASUREMENT,
-            suggested_display_precision=1,
-        ),
-        _d(
-            "avg_end_deviation",
-            native_unit_of_measurement=_MIN,
-            state_class=SensorStateClass.MEASUREMENT,
-            suggested_display_precision=1,
-        ),
+        _d("actual_outage_percent", **_PCT),
+        _d("scheduled_outage_percent", **_PCT),
+        _d("outage_count", **_CNT),
+        _d("outage_duration", **_DUR),
+        _d("avg_outage_duration", **_DUR, **_OFF),
+        _d("longest_outage", **_DUR),
+        _d("longest_uptime", **_DUR),
+        _d("planned_realized_percent", **_PCT),
+        _d("outage_planned_percent", **_PCT),
+        _d("matched_count", **_CNT, **_OFF),
+        _d("unplanned_count", **_CNT),
+        _d("unplanned_duration", **_DUR, **_OFF),
+        _d("skipped_planned_count", **_CNT),
+        _d("avg_start_deviation", **_DEV),
+        _d("avg_end_deviation", **_DEV),
         _d("avg_power_off_time"),
         _d("avg_power_on_time"),
+        _d("power_duration", **_DUR),
+        _d("scheduled_outage_duration", **_DUR),
+        _d("scheduled_power_duration", **_DUR),
+        _d("scheduled_outage_count", **_CNT),
+        _d("outage_vs_schedule", **_DEV),
+        _d("schedule_changes", **_CNT),
+        _d("avg_schedule_publish_time"),
     ]
 }
 assert set(STAT_DESCRIPTIONS) == set(METRIC_KEYS)

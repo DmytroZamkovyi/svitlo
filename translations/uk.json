@@ -199,6 +199,60 @@
       },
       "avg_power_on_time": {
         "name": "Середній час увімкнення"
+      },
+      "power_duration": {
+        "name": "Час зі світлом"
+      },
+      "scheduled_outage_duration": {
+        "name": "Без світла за графіком"
+      },
+      "scheduled_power_duration": {
+        "name": "Зі світлом за графіком"
+      },
+      "scheduled_outage_count": {
+        "name": "Відключень за графіком"
+      },
+      "outage_vs_schedule": {
+        "name": "Факт мінус графік (без світла)"
+      },
+      "schedule_changes": {
+        "name": "Змін графіка"
+      },
+      "avg_schedule_publish_time": {
+        "name": "Середній час публікації графіка на завтра"
+      },
+      "today_planned_outage": {
+        "name": "Сьогодні: без світла за графіком"
+      },
+      "today_planned_power": {
+        "name": "Сьогодні: зі світлом за графіком"
+      },
+      "today_planned_outage_count": {
+        "name": "Сьогодні: відключень за графіком"
+      },
+      "today_planned_longest_outage": {
+        "name": "Сьогодні: найдовше відключення за графіком"
+      },
+      "today_planned_possible_outage": {
+        "name": "Сьогодні: можливі відключення за графіком"
+      },
+      "tomorrow_planned_outage": {
+        "name": "Завтра: без світла за графіком"
+      },
+      "tomorrow_planned_power": {
+        "name": "Завтра: зі світлом за графіком"
+      },
+      "tomorrow_planned_outage_count": {
+        "name": "Завтра: відключень за графіком"
+      },
+      "tomorrow_planned_longest_outage": {
+        "name": "Завтра: найдовше відключення за графіком"
+      },
+      "tomorrow_planned_possible_outage": {
+        "name": "Завтра: можливі відключення за графіком"
+      },
+      "today_planned_outage_remaining": {
+        "name": "Сьогодні: ще без світла за графіком"
       }
     },
     "binary_sensor": {
@@ -207,6 +261,9 @@
       },
       "scheduled_outage": {
         "name": "Відключення за графіком"
+      },
+      "tomorrow_schedule": {
+        "name": "Графік на завтра опубліковано"
       }
     },
     "calendar": {

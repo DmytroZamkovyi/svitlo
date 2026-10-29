@@ -32,6 +32,13 @@ METRIC_KEYS = [
     "avg_end_deviation",
     "avg_power_off_time",
     "avg_power_on_time",
+    "power_duration",
+    "scheduled_outage_duration",
+    "scheduled_power_duration",
+    "scheduled_outage_count",
+    "outage_vs_schedule",
+    "schedule_changes",
+    "avg_schedule_publish_time",
 ]
 
 
@@ -280,5 +287,43 @@ def compute(
     res["avg_power_on_time"] = (
         _circular_mean_hhmm([_minute_of_day(o.end) for o in considered if o.end]),
         {},
+    )
+
+    # --- schedule-oriented
+    res["power_duration"] = (round((period_len - actual_total) / 60, 1), {})
+    if covered_len:
+        res["scheduled_outage_duration"] = (round(planned_total / 60, 1), {})
+        res["scheduled_power_duration"] = (
+            round((covered_len - planned_total) / 60, 1),
+            {},
+        )
+        res["scheduled_outage_count"] = (
+            sum(1 for s, e in planned_all if e > start and s < end),
+            {},
+        )
+        res["outage_vs_schedule"] = (
+            round((actual_cov_total - planned_total) / 60, 1),
+            {},
+        )
+    res["schedule_changes"] = (
+        sum(1 for v in versions[1:] if start <= v.fetched_at < end),
+        {},
+    )
+    # When the schedule for a day first appeared in advance (the day before).
+    first_seen: dict[date, datetime] = {}
+    for v in versions:
+        for d, ds in v.days.items():
+            if ds.slots and d not in first_seen:
+                first_seen[d] = v.fetched_at
+    baseline = versions[0].fetched_at if versions else None
+    published = []
+    for d, seen in first_seen.items():
+        midnight = datetime.combine(d, time(0, 0), tzinfo=tz)
+        if seen == baseline or seen >= midnight or not start <= seen < end:
+            continue
+        published.append(_minute_of_day(seen))
+    res["avg_schedule_publish_time"] = (
+        _circular_mean_hhmm(published),
+        {"samples": len(published)} if published else {},
     )
     return {k: res.get(k, (None, {})) for k in METRIC_KEYS}

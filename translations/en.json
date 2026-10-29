@@ -199,6 +199,60 @@
       },
       "avg_power_on_time": {
         "name": "Average power-on time"
+      },
+      "power_duration": {
+        "name": "Time with power"
+      },
+      "scheduled_outage_duration": {
+        "name": "Scheduled time without power"
+      },
+      "scheduled_power_duration": {
+        "name": "Scheduled time with power"
+      },
+      "scheduled_outage_count": {
+        "name": "Scheduled outages"
+      },
+      "outage_vs_schedule": {
+        "name": "Actual minus scheduled outage time"
+      },
+      "schedule_changes": {
+        "name": "Schedule changes"
+      },
+      "avg_schedule_publish_time": {
+        "name": "Average publish time of tomorrow's schedule"
+      },
+      "today_planned_outage": {
+        "name": "Today: scheduled time without power"
+      },
+      "today_planned_power": {
+        "name": "Today: scheduled time with power"
+      },
+      "today_planned_outage_count": {
+        "name": "Today: scheduled outages"
+      },
+      "today_planned_longest_outage": {
+        "name": "Today: longest scheduled outage"
+      },
+      "today_planned_possible_outage": {
+        "name": "Today: possible outages"
+      },
+      "tomorrow_planned_outage": {
+        "name": "Tomorrow: scheduled time without power"
+      },
+      "tomorrow_planned_power": {
+        "name": "Tomorrow: scheduled time with power"
+      },
+      "tomorrow_planned_outage_count": {
+        "name": "Tomorrow: scheduled outages"
+      },
+      "tomorrow_planned_longest_outage": {
+        "name": "Tomorrow: longest scheduled outage"
+      },
+      "tomorrow_planned_possible_outage": {
+        "name": "Tomorrow: possible outages"
+      },
+      "today_planned_outage_remaining": {
+        "name": "Today: scheduled outage time left"
       }
     },
     "binary_sensor": {
@@ -207,6 +261,9 @@
       },
       "scheduled_outage": {
         "name": "Scheduled outage"
+      },
+      "tomorrow_schedule": {
+        "name": "Tomorrow's schedule published"
       }
     },
     "calendar": {

@@ -276,3 +276,42 @@ def diff_snapshots(
         if before != after:
             out.append((day, before, after))
     return out
+
+
+def day_summary(
+    snap: Snapshot | None, day: date, tz: tzinfo, now: datetime | None = None
+) -> dict[str, Any] | None:
+    """Planned outage/power minutes for one day, or None if the day has no data.
+
+    With `now`, also the outage minutes still ahead today ("remaining").
+    """
+    if snap is None or day not in snap.days or not snap.days[day].slots:
+        return None
+    ds = snap.days[day]
+    day_start = minutes_to_dt(day, 0, tz)
+    day_len = (minutes_to_dt(day, 1440, tz) - day_start).total_seconds() / 60
+    outages = _join(ds.intervals(tz, OUTAGE_KINDS), ignore_kind=True)
+    possible = ds.intervals(tz, (KIND_POSSIBLE,))
+
+    def minutes(ivs: list[Interval]) -> float:
+        return sum((iv.end - iv.start).total_seconds() for iv in ivs) / 60
+
+    outage = minutes(outages)
+    result: dict[str, Any] = {
+        "outage": round(outage, 1),
+        "power": round(day_len - outage, 1),
+        "possible": round(minutes(possible), 1),
+        "count": len(outages),
+        "longest": round(max((minutes([iv]) for iv in outages), default=0), 1),
+    }
+    if now is not None:
+        result["remaining"] = round(
+            sum(
+                (iv.end - max(iv.start, now)).total_seconds()
+                for iv in outages
+                if iv.end > now
+            )
+            / 60,
+            1,
+        )
+    return result
