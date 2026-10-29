@@ -12,11 +12,10 @@ from homeassistant.util import dt as dt_util
 
 from .entity import SvitloEntity
 from .runtime import SvitloRuntime
-from .schedule import DaySchedule, diff_snapshots, ongoing_end
-from .texts import fmt_duration, fmt_ranges, texts
+from .schedule import DaySchedule, ongoing_end
+from .texts import fmt_duration, texts
 
 PARALLEL_UPDATES = 0
-MARKER_LENGTH = timedelta(minutes=15)
 
 
 async def async_setup_entry(
@@ -86,7 +85,7 @@ class CurrentScheduleCalendar(BaseCalendar):
 
 
 class ScheduleHistoryCalendar(BaseCalendar):
-    """Final slots per day (frozen after the day) plus a marker per schedule change."""
+    """Final slots per day (frozen after the day)."""
 
     def __init__(self, runtime: SvitloRuntime) -> None:
         super().__init__(runtime, "schedule_history", "yasno")
@@ -113,27 +112,6 @@ class ScheduleHistoryCalendar(BaseCalendar):
                         uid=f"slot:{iv.kind}:{iv.start.isoformat()}:{iv.end.isoformat()}",
                     )
                 )
-
-        for index, version in enumerate(versions):
-            if version.fetched_at + MARKER_LENGTH <= start or version.fetched_at >= end:
-                continue
-            previous = versions[index - 1] if index else None
-            lines = []
-            for day, before, after in diff_snapshots(previous, version):
-                line = f"{day:%d.%m}: "
-                if previous is not None:
-                    line += f"{t['before']} {fmt_ranges(before, t)} → "
-                line += f"{t['after']} {fmt_ranges(after, t)}"
-                lines.append(line)
-            events.append(
-                CalendarEvent(
-                    start=version.fetched_at,
-                    end=version.fetched_at + MARKER_LENGTH,
-                    summary=t["schedule_updated" if previous else "schedule_first"],
-                    description="\n".join(lines) or None,
-                    uid=f"version:{version.fetched_at.isoformat()}",
-                )
-            )
         return events
 
 
