@@ -73,13 +73,13 @@ def _select(options: list[tuple[str, str]]) -> SelectSelector:
     )
 
 
-def _number(minimum: float, maximum: float, unit: str | None = None) -> NumberSelector:
-    config = NumberSelectorConfig(
-        min=minimum, max=maximum, step=1, mode=NumberSelectorMode.BOX
+def _number(minimum: float, maximum: float) -> NumberSelector:
+    # Units are in the translated labels; the selector's own unit is not translated.
+    return NumberSelector(
+        NumberSelectorConfig(
+            min=minimum, max=maximum, step=1, mode=NumberSelectorMode.BOX
+        )
     )
-    if unit:
-        config["unit_of_measurement"] = unit
-    return NumberSelector(config)
 
 
 def validate_template(hass: HomeAssistant, value: str) -> str | None:
@@ -374,18 +374,18 @@ class SvitloOptionsFlow(OptionsFlowWithReload):
                 ): TemplateSelector(),
                 vol.Required(
                     CONF_DELAY_OFF, default=default(CONF_DELAY_OFF, DEFAULT_DELAY_OFF)
-                ): _number(0, 3600, "s"),
+                ): _number(0, 3600),
                 vol.Required(
                     CONF_DELAY_ON, default=default(CONF_DELAY_ON, DEFAULT_DELAY_ON)
-                ): _number(0, 3600, "s"),
+                ): _number(0, 3600),
                 vol.Required(
                     CONF_SCHEDULE_INTERVAL,
                     default=default(CONF_SCHEDULE_INTERVAL, DEFAULT_SCHEDULE_INTERVAL),
-                ): _number(1, 1440, "min"),
+                ): _number(1, 1440),
                 vol.Required(
                     CONF_ADDRESS_INTERVAL,
                     default=default(CONF_ADDRESS_INTERVAL, DEFAULT_ADDRESS_INTERVAL),
-                ): _number(1, 1440, "min"),
+                ): _number(1, 1440),
                 vol.Required(
                     CONF_ADDRESS_FAIL_LIMIT,
                     default=default(
@@ -395,11 +395,11 @@ class SvitloOptionsFlow(OptionsFlowWithReload):
                 vol.Required(
                     CONF_MATCH_MIN_OVERLAP,
                     default=default(CONF_MATCH_MIN_OVERLAP, DEFAULT_MATCH_MIN_OVERLAP),
-                ): _number(0, 240, "min"),
+                ): _number(0, 240),
                 vol.Required(
                     CONF_RETENTION_DAYS,
                     default=default(CONF_RETENTION_DAYS, DEFAULT_RETENTION_DAYS),
-                ): _number(7, 3650, "d"),
+                ): _number(7, 3650),
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
