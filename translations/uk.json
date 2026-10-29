@@ -1,0 +1,249 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Регіон",
+        "description": "Оберіть регіон.",
+        "data": {
+          "region": "Регіон"
+        }
+      },
+      "dso": {
+        "title": "Оператор (ДСО)",
+        "data": {
+          "dso": "Оператор"
+        }
+      },
+      "street": {
+        "title": "Вулиця",
+        "description": "Введіть частину назви вулиці для пошуку.",
+        "data": {
+          "query": "Назва вулиці"
+        }
+      },
+      "street_pick": {
+        "title": "Оберіть вулицю",
+        "data": {
+          "street": "Вулиця"
+        }
+      },
+      "house": {
+        "title": "Будинок",
+        "description": "Введіть номер будинку для пошуку.",
+        "data": {
+          "query": "Номер будинку"
+        }
+      },
+      "house_pick": {
+        "title": "Оберіть будинок",
+        "data": {
+          "house": "Будинок"
+        }
+      },
+      "power": {
+        "title": "Стан світла",
+        "description": "Шаблон, що повертає true, якщо світло є, і false, якщо його немає. Його можна змінити пізніше в налаштуваннях інтеграції.",
+        "data": {
+          "power_template": "Шаблон стану світла"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Не вдалося з'єднатися з Yasno.",
+      "street_not_found": "Вулицю не знайдено.",
+      "house_not_found": "Будинок не знайдено.",
+      "group_not_found": "Для цієї адреси не вдалося визначити групу.",
+      "invalid_template": "Помилка в шаблоні.",
+      "template_not_boolean": "Шаблон має повертати true або false.",
+      "unknown": "Невідома помилка."
+    },
+    "abort": {
+      "cannot_connect": "Не вдалося з'єднатися з Yasno.",
+      "single_instance_allowed": "Інтеграція вже налаштована.",
+      "reconfigure_successful": "Адресу змінено."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Налаштування",
+        "data": {
+          "power_template": "Шаблон стану світла",
+          "delay_off": "Затримка фіксації зникнення світла (с)",
+          "delay_on": "Затримка фіксації появи світла (с)",
+          "schedule_interval": "Інтервал оновлення графіка (хв)",
+          "address_interval": "Інтервал перевірки групи й ID вулиці (хв)",
+          "address_fail_limit": "Невдалих перевірок адреси до сповіщення",
+          "match_min_overlap": "Мінімальний збіг із графіком (хв)",
+          "retention_days": "Зберігати історію (днів)"
+        },
+        "data_description": {
+          "delay_off": "Скільки світла має не бути, щоб відключення зафіксувалось. Час початку береться з першої зміни.",
+          "match_min_overlap": "Фактичне відключення вважається збігом зі слотом графіка, якщо перекриття не менше цього значення."
+        }
+      }
+    },
+    "error": {
+      "invalid_template": "Помилка в шаблоні.",
+      "template_not_boolean": "Шаблон має повертати true або false."
+    }
+  },
+  "device": {
+    "yasno": {
+      "name": "Yasno"
+    },
+    "power": {
+      "name": "Світло"
+    },
+    "stats_today": {
+      "name": "Статистика: сьогодні"
+    },
+    "stats_yesterday": {
+      "name": "Статистика: вчора"
+    },
+    "stats_week": {
+      "name": "Статистика: 7 днів"
+    },
+    "stats_month": {
+      "name": "Статистика: 30 днів"
+    },
+    "stats_all": {
+      "name": "Статистика: весь час"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Статус за графіком",
+        "state": {
+          "power_on": "Світло є",
+          "outage": "Відключення",
+          "possible_outage": "Можливе відключення",
+          "emergency": "Екстрене відключення",
+          "unknown": "Невідомо"
+        }
+      },
+      "next_outage": {
+        "name": "Наступне відключення"
+      },
+      "next_power_on": {
+        "name": "Наступне увімкнення"
+      },
+      "group": {
+        "name": "Група"
+      },
+      "schedule_updated": {
+        "name": "Графік оновлено"
+      },
+      "probable": {
+        "name": "Можливі відключення",
+        "state": {
+          "none": "Немає",
+          "present": "Є",
+          "unknown": "Невідомо"
+        }
+      },
+      "last_change": {
+        "name": "Остання зміна стану"
+      },
+      "state_duration": {
+        "name": "Тривалість поточного стану"
+      },
+      "actual_outage_percent": {
+        "name": "Фактична частка відключень"
+      },
+      "scheduled_outage_percent": {
+        "name": "Частка відключень за графіком"
+      },
+      "outage_count": {
+        "name": "Кількість відключень"
+      },
+      "outage_duration": {
+        "name": "Сумарна тривалість відключень"
+      },
+      "avg_outage_duration": {
+        "name": "Середня тривалість відключення"
+      },
+      "longest_outage": {
+        "name": "Найдовше відключення"
+      },
+      "longest_uptime": {
+        "name": "Найдовший період зі світлом"
+      },
+      "planned_realized_percent": {
+        "name": "Заплановані відключення, що відбулись"
+      },
+      "outage_planned_percent": {
+        "name": "Фактичні відключення, що були за графіком"
+      },
+      "matched_count": {
+        "name": "Збіги з графіком (кількість)"
+      },
+      "unplanned_count": {
+        "name": "Позапланові відключення (кількість)"
+      },
+      "unplanned_duration": {
+        "name": "Тривалість позапланових відключень"
+      },
+      "skipped_planned_count": {
+        "name": "Планові відключення, що не відбулись"
+      },
+      "avg_start_deviation": {
+        "name": "Відхилення вимкнення від графіка"
+      },
+      "avg_end_deviation": {
+        "name": "Відхилення увімкнення від графіка"
+      },
+      "avg_power_off_time": {
+        "name": "Середній час вимкнення"
+      },
+      "avg_power_on_time": {
+        "name": "Середній час увімкнення"
+      }
+    },
+    "binary_sensor": {
+      "power": {
+        "name": "Світло"
+      },
+      "scheduled_outage": {
+        "name": "Відключення за графіком"
+      }
+    },
+    "calendar": {
+      "current_schedule": {
+        "name": "Поточний графік"
+      },
+      "schedule_history": {
+        "name": "Історія графіків"
+      },
+      "actual_outages": {
+        "name": "Фактичні відключення"
+      }
+    },
+    "event": {
+      "changes": {
+        "name": "Зміни",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "group_changed": "Група змінилась",
+              "schedule_changed": "Графік змінився",
+              "power_lost": "Світло зникло",
+              "power_restored": "Світло з'явилось"
+            }
+          }
+        }
+      }
+    }
+  },
+  "issues": {
+    "address_not_found": {
+      "title": "Адресу не знайдено в Yasno",
+      "description": "Збережену вулицю або будинок не вдалося знайти в Yasno кілька разів поспіль. Використовуються останні відомі дані. Змініть адресу в налаштуваннях інтеграції («Переналаштувати»)."
+    },
+    "stale_data": {
+      "title": "Дані графіка застаріли",
+      "description": "Графік Yasno не вдається оновити кілька разів поспіль. Показано останні отримані дані."
+    }
+  }
+}

@@ -1,0 +1,249 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Region",
+        "description": "Select your region.",
+        "data": {
+          "region": "Region"
+        }
+      },
+      "dso": {
+        "title": "Operator (DSO)",
+        "data": {
+          "dso": "Operator"
+        }
+      },
+      "street": {
+        "title": "Street",
+        "description": "Enter part of the street name to search.",
+        "data": {
+          "query": "Street name"
+        }
+      },
+      "street_pick": {
+        "title": "Pick the street",
+        "data": {
+          "street": "Street"
+        }
+      },
+      "house": {
+        "title": "House",
+        "description": "Enter the house number to search.",
+        "data": {
+          "query": "House number"
+        }
+      },
+      "house_pick": {
+        "title": "Pick the house",
+        "data": {
+          "house": "House"
+        }
+      },
+      "power": {
+        "title": "Power state",
+        "description": "A template that returns true when power is present and false when it is not. You can change it later in the integration options.",
+        "data": {
+          "power_template": "Power state template"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to Yasno.",
+      "street_not_found": "Street not found.",
+      "house_not_found": "House not found.",
+      "group_not_found": "Could not determine the group for this address.",
+      "invalid_template": "The template has an error.",
+      "template_not_boolean": "The template must return true or false.",
+      "unknown": "Unknown error."
+    },
+    "abort": {
+      "cannot_connect": "Could not connect to Yasno.",
+      "single_instance_allowed": "The integration is already configured.",
+      "reconfigure_successful": "Address updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options",
+        "data": {
+          "power_template": "Power state template",
+          "delay_off": "Delay before power loss is confirmed (s)",
+          "delay_on": "Delay before power return is confirmed (s)",
+          "schedule_interval": "Schedule update interval (min)",
+          "address_interval": "Group and street ID refresh interval (min)",
+          "address_fail_limit": "Failed address lookups before a repair issue",
+          "match_min_overlap": "Minimum overlap with the schedule (min)",
+          "retention_days": "Keep history (days)"
+        },
+        "data_description": {
+          "delay_off": "How long power must be gone before an outage is recorded. The start time is the first change.",
+          "match_min_overlap": "An actual outage matches a scheduled slot when they overlap by at least this much."
+        }
+      }
+    },
+    "error": {
+      "invalid_template": "The template has an error.",
+      "template_not_boolean": "The template must return true or false."
+    }
+  },
+  "device": {
+    "yasno": {
+      "name": "Yasno"
+    },
+    "power": {
+      "name": "Power"
+    },
+    "stats_today": {
+      "name": "Statistics: today"
+    },
+    "stats_yesterday": {
+      "name": "Statistics: yesterday"
+    },
+    "stats_week": {
+      "name": "Statistics: 7 days"
+    },
+    "stats_month": {
+      "name": "Statistics: 30 days"
+    },
+    "stats_all": {
+      "name": "Statistics: all time"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Scheduled status",
+        "state": {
+          "power_on": "Power on",
+          "outage": "Outage",
+          "possible_outage": "Possible outage",
+          "emergency": "Emergency outage",
+          "unknown": "Unknown"
+        }
+      },
+      "next_outage": {
+        "name": "Next outage"
+      },
+      "next_power_on": {
+        "name": "Next power on"
+      },
+      "group": {
+        "name": "Group"
+      },
+      "schedule_updated": {
+        "name": "Schedule updated"
+      },
+      "probable": {
+        "name": "Probable outages",
+        "state": {
+          "none": "None",
+          "present": "Present",
+          "unknown": "Unknown"
+        }
+      },
+      "last_change": {
+        "name": "Last state change"
+      },
+      "state_duration": {
+        "name": "Current state duration"
+      },
+      "actual_outage_percent": {
+        "name": "Actual outage share"
+      },
+      "scheduled_outage_percent": {
+        "name": "Scheduled outage share"
+      },
+      "outage_count": {
+        "name": "Outage count"
+      },
+      "outage_duration": {
+        "name": "Total outage duration"
+      },
+      "avg_outage_duration": {
+        "name": "Average outage duration"
+      },
+      "longest_outage": {
+        "name": "Longest outage"
+      },
+      "longest_uptime": {
+        "name": "Longest time with power"
+      },
+      "planned_realized_percent": {
+        "name": "Planned outage time that happened"
+      },
+      "outage_planned_percent": {
+        "name": "Actual outage time that was planned"
+      },
+      "matched_count": {
+        "name": "Matched outages"
+      },
+      "unplanned_count": {
+        "name": "Unplanned outages"
+      },
+      "unplanned_duration": {
+        "name": "Unplanned outage duration"
+      },
+      "skipped_planned_count": {
+        "name": "Planned outages that did not happen"
+      },
+      "avg_start_deviation": {
+        "name": "Power-off deviation from schedule"
+      },
+      "avg_end_deviation": {
+        "name": "Power-on deviation from schedule"
+      },
+      "avg_power_off_time": {
+        "name": "Average power-off time"
+      },
+      "avg_power_on_time": {
+        "name": "Average power-on time"
+      }
+    },
+    "binary_sensor": {
+      "power": {
+        "name": "Power"
+      },
+      "scheduled_outage": {
+        "name": "Scheduled outage"
+      }
+    },
+    "calendar": {
+      "current_schedule": {
+        "name": "Current schedule"
+      },
+      "schedule_history": {
+        "name": "Schedule history"
+      },
+      "actual_outages": {
+        "name": "Actual outages"
+      }
+    },
+    "event": {
+      "changes": {
+        "name": "Changes",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "group_changed": "Group changed",
+              "schedule_changed": "Schedule changed",
+              "power_lost": "Power lost",
+              "power_restored": "Power restored"
+            }
+          }
+        }
+      }
+    }
+  },
+  "issues": {
+    "address_not_found": {
+      "title": "Address not found in Yasno",
+      "description": "The saved street or house could not be found in Yasno several times in a row. The last known data is used. Change the address in the integration menu (Reconfigure)."
+    },
+    "stale_data": {
+      "title": "Schedule data is stale",
+      "description": "The Yasno schedule could not be updated several times in a row. The last received data is shown."
+    }
+  }
+}
