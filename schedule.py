@@ -17,6 +17,12 @@ SLOT_KIND = {
 }
 OUTAGE_KINDS = (KIND_OUTAGE, KIND_EMERGENCY)
 
+# Day status Yasno reports while emergency shutdowns are in force. It is a flag of
+# the whole day, not a slot: the regular slots of that day stay valid.
+STATUS_EMERGENCY = "EmergencyShutdowns"
+# Versions 0.1.0-0.1.2 replaced the slots of such a day with this one slot.
+_LEGACY_EMERGENCY_SLOTS = [(0, 1440, STATUS_EMERGENCY)]
+
 STATE_POWER_ON = "power_on"
 STATE_OUTAGE = "outage"
 STATE_POSSIBLE = "possible_outage"
@@ -89,16 +95,24 @@ class DaySchedule:
                 out.append([start, end, kind])
         return [(a, b, k) for a, b, k in out]
 
+    @property
+    def emergency(self) -> bool:
+        """Emergency shutdowns announced for this day (status or emergency slot)."""
+        return self.status == STATUS_EMERGENCY or any(
+            typ == STATUS_EMERGENCY for _, _, typ in self.slots
+        )
+
     def to_dict(self) -> dict[str, Any]:
         return {"status": self.status, "slots": [list(s) for s in self.slots]}
 
     @classmethod
     def from_dict(cls, day: date, data: dict[str, Any]) -> DaySchedule:
-        return cls(
-            day,
-            str(data.get("status") or ""),
-            [(int(s[0]), int(s[1]), str(s[2])) for s in data.get("slots", [])],
-        )
+        status = str(data.get("status") or "")
+        slots = [(int(s[0]), int(s[1]), str(s[2])) for s in data.get("slots", [])]
+        if status == STATUS_EMERGENCY and slots == _LEGACY_EMERGENCY_SLOTS:
+            # Synthetic slot written by older versions; the real slots are unknown.
+            slots = []
+        return cls(day, status, slots)
 
 
 @dataclass
@@ -200,14 +214,40 @@ def parse_planned(
                 slots.append((int(slot["start"]), int(slot["end"]), str(slot["type"])))
             except (KeyError, TypeError, ValueError):
                 continue
-        if status == "EmergencyShutdowns" and not any(
-            typ == "EmergencyShutdowns" for _, _, typ in slots
-        ):
-            slots = [(0, 1440, "EmergencyShutdowns")]
         days[day] = DaySchedule(day, status, slots)
     if not days:
         return None
     return Snapshot(fetched_at, group, _parse_dt(block.get("updatedOn")), days)
+
+
+def keep_schedule_on_emergency(new: Snapshot, versions: list[Snapshot]) -> Snapshot:
+    """Keep the regular slots of a day that switched to emergency shutdowns.
+
+    If Yasno marks a day as emergency and sends it without slots, the slots of
+    the latest earlier version of that day are kept (power is usually still
+    switched by the schedule). Days that came with their own slots are untouched.
+    """
+    days = dict(new.days)
+    changed = False
+    for day, ds in new.days.items():
+        if ds.slots or not ds.emergency:
+            continue
+        for version in reversed(versions):
+            prev = version.days.get(day)
+            if prev is not None and prev.slots:
+                days[day] = DaySchedule(day, ds.status, list(prev.slots))
+                changed = True
+                break
+    if not changed:
+        return new
+    return Snapshot(new.fetched_at, new.group, new.updated_on, days)
+
+
+def emergency_on(snap: Snapshot | None, day: date) -> bool | None:
+    """Emergency flag of `day`, or None if the schedule has no such day."""
+    if snap is None or day not in snap.days:
+        return None
+    return snap.days[day].emergency
 
 
 def current_state(snap: Snapshot | None, now: datetime, tz: tzinfo) -> str:

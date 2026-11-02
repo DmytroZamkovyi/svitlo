@@ -159,6 +159,9 @@ def compute(
         )
         if span[1] <= start or span[0] >= end:
             continue
+        if ds.emergency and not ds.slots:
+            # Emergency day whose schedule is unknown: not a day with a schedule
+            continue
         covered.append(span)
         planned_raw.extend(
             (iv.start, iv.end) for iv in ds.intervals(tz, ("outage", "emergency"))

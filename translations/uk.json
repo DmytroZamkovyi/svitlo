@@ -264,6 +264,9 @@
       },
       "tomorrow_schedule": {
         "name": "Графік на завтра опубліковано"
+      },
+      "emergency": {
+        "name": "Екстрені відключення"
       }
     },
     "calendar": {

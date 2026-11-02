@@ -40,7 +40,13 @@ from .const import (
     ISSUE_STALE_DATA,
     STALE_FAIL_LIMIT,
 )
-from .schedule import Snapshot, diff_snapshots, next_boundary, parse_planned
+from .schedule import (
+    Snapshot,
+    diff_snapshots,
+    keep_schedule_on_emergency,
+    next_boundary,
+    parse_planned,
+)
 from .store import SvitloStore
 
 _LOGGER = logging.getLogger(__name__)
@@ -197,6 +203,7 @@ class YasnoCoordinator(DataUpdateCoordinator[ScheduleData]):
             snapshot = parse_planned(planned, self.group_key, now, tz)
             if snapshot is None:
                 raise YasnoError("planned-outages: unexpected response")
+            snapshot = keep_schedule_on_emergency(snapshot, self.store.versions)
             try:
                 probable_raw = await self.client.get_probable(
                     data[CONF_REGION_ID], data[CONF_DSO_ID], group, subgroup

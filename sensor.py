@@ -26,6 +26,7 @@ from .schedule import (
     STATES,
     current_state,
     day_summary,
+    emergency_on,
     next_outage_start,
     next_power_on,
     timeline,
@@ -88,8 +89,10 @@ class StatusSensor(YasnoSensor):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         data = self.runtime.coordinator.data
+        today = dt_util.now(self.runtime.tz).date()
         return {
             "timeline": timeline(self._snapshot, self.runtime.tz),
+            "emergency": emergency_on(self._snapshot, today),
             "stale": data.stale if data else None,
         }
 

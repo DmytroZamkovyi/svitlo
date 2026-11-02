@@ -264,6 +264,9 @@
       },
       "tomorrow_schedule": {
         "name": "Tomorrow's schedule published"
+      },
+      "emergency": {
+        "name": "Emergency shutdowns"
       }
     },
     "calendar": {
