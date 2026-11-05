@@ -22,6 +22,7 @@ from homeassistant.const import (
     UnitOfTime,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
@@ -29,7 +30,7 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import dt as dt_util
 
 from . import battery as bat
-from .batteries import WINDOWS, BatteryManager
+from .batteries import BatteryManager
 from .const import CONF_GROUP, CONF_SUBGROUP, PERIODS
 from .entity import SvitloEntity
 from .runtime import SvitloRuntime
@@ -69,8 +70,19 @@ async def async_setup_entry(
         for key in METRIC_KEYS:
             entities.append(StatSensor(runtime, period, STAT_DESCRIPTIONS[key]))
     async_add_entities(entities)
+    registry = er.async_get(hass)
     for subentry_id, manager in runtime.batteries.items():
-        async_add_entities(battery_entities(manager), config_subentry_id=subentry_id)
+        batteries = battery_entities(manager)
+        valid = {b.unique_id for b in batteries}
+        # Drop sensors of earlier versions (24h / 7d / 30d windows) that no longer exist
+        for item in er.async_entries_for_config_entry(registry, entry.entry_id):
+            if (
+                getattr(item, "config_subentry_id", None) == subentry_id
+                and item.domain == "sensor"
+                and item.unique_id not in valid
+            ):
+                registry.async_remove(item.entity_id)
+        async_add_entities(batteries, config_subentry_id=subentry_id)
 
 
 # --------------------------------------------------------------------- schedule
@@ -375,7 +387,6 @@ class BatteryDescription(SensorEntityDescription):
 
     value_fn: Callable[[BatteryManager, datetime], Any]
     attrs_fn: Callable[[BatteryManager, datetime], dict[str, Any]] | None = None
-    period_label: str | None = None
 
 
 def _rounded(value: float | None, digits: int = 0) -> float | int | None:
@@ -384,9 +395,6 @@ def _rounded(value: float | None, digits: int = 0) -> float | int | None:
 
 def _eta(hours: float | None, now: datetime) -> dict[str, Any]:
     return {"estimated_at": (now + timedelta(hours=hours)).isoformat()} if hours else {}
-
-
-_PERIOD_LABELS = {"day": "24h", "week": "7d", "month": "30d"}
 
 
 def battery_entities(manager: BatteryManager) -> list[SensorEntity]:
@@ -488,91 +496,6 @@ def battery_entities(manager: BatteryManager) -> list[SensorEntity]:
                 attrs_fn=lambda m, now: _eta(m.live.time_to_full_h(now), now),
             ),
         ]
-    for window in WINDOWS:
-        label = _PERIOD_LABELS[window]
-
-        def get(metric: str, window: str = window) -> Callable[[BatteryManager, datetime], Any]:
-            return lambda m, now: m.windows.get(window, {}).get(metric)
-
-        common = {"period_label": label}
-        metrics: list[BatteryDescription] = [
-            BatteryDescription(
-                key=f"{window}_charged",
-                translation_key="battery_charged",
-                device_class=SensorDeviceClass.ENERGY,
-                native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
-                suggested_display_precision=2,
-                value_fn=get("charged"),
-                **common,
-            ),
-            BatteryDescription(
-                key=f"{window}_discharged",
-                translation_key="battery_discharged",
-                device_class=SensorDeviceClass.ENERGY,
-                native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
-                suggested_display_precision=2,
-                value_fn=get("discharged"),
-                **common,
-            ),
-            BatteryDescription(
-                key=f"{window}_ratio",
-                translation_key="battery_ratio",
-                native_unit_of_measurement=PERCENTAGE,
-                state_class=SensorStateClass.MEASUREMENT,
-                suggested_display_precision=0,
-                value_fn=get("ratio"),
-                **common,
-            ),
-            BatteryDescription(
-                key=f"{window}_avg_load",
-                translation_key="battery_avg_load",
-                device_class=SensorDeviceClass.POWER,
-                native_unit_of_measurement=UnitOfPower.WATT,
-                state_class=SensorStateClass.MEASUREMENT,
-                suggested_display_precision=0,
-                value_fn=get("avg_load"),
-                **common,
-            ),
-        ]
-        if manager.has_power_sensor:
-            metrics.append(
-                BatteryDescription(
-                    key=f"{window}_peak_load",
-                    translation_key="battery_peak_load",
-                    device_class=SensorDeviceClass.POWER,
-                    native_unit_of_measurement=UnitOfPower.WATT,
-                    state_class=SensorStateClass.MEASUREMENT,
-                    suggested_display_precision=0,
-                    value_fn=get("peak_load"),
-                    **common,
-                )
-            )
-        if cap:
-            metrics += [
-                BatteryDescription(
-                    key=f"{window}_cycles",
-                    translation_key="battery_cycles",
-                    state_class=SensorStateClass.MEASUREMENT,
-                    suggested_display_precision=2,
-                    value_fn=get("cycles"),
-                    **common,
-                ),
-                BatteryDescription(
-                    key=f"{window}_runtime_avg",
-                    translation_key="battery_runtime_avg",
-                    device_class=SensorDeviceClass.DURATION,
-                    native_unit_of_measurement=UnitOfTime.HOURS,
-                    state_class=SensorStateClass.MEASUREMENT,
-                    suggested_display_precision=1,
-                    value_fn=get("runtime_avg"),
-                    **common,
-                ),
-            ]
-        if window == "month":  # the 30-day set is opt-in to keep the device tidy
-            metrics = [
-                replace(m, entity_registry_enabled_default=False) for m in metrics
-            ]
-        descriptions += metrics
     return [BatterySensor(manager, d) for d in descriptions]
 
 
@@ -589,8 +512,6 @@ class BatterySensor(SensorEntity):
         self._attr_unique_id = (
             f"{manager.entry.entry_id}_{manager.subentry_id}_{description.key}"
         )
-        if description.period_label:
-            self._attr_translation_placeholders = {"period": description.period_label}
         self._attr_device_info = DeviceInfo(
             identifiers={manager.device_identifier()},
             name=manager.title,

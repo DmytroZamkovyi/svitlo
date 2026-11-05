@@ -32,11 +32,10 @@ Calendar events have stable `uid`s, so another tool can mirror them to an extern
 
 ## Batteries
 
-Open the integration and use **Add battery** (as many as you like). Pick sensors the same way as in the Energy dashboard: the energy going into the battery (charge) and coming out of it (discharge), optionally a power sensor (one sensor, positive = discharging or charging, or two separate ones) and a charge level sensor (%). Add the usable capacity (kWh), the reserve and target charge to get time estimates. At least one sensor is required; each battery becomes its own device and can be changed or removed at any time.
+Open the integration and use **Add battery** (as many as you like). Pick sensors the same way as in the Energy dashboard: the energy going into the battery (charge) and coming out of it (discharge), optionally a power sensor (one sensor, positive = discharging or charging, or two separate ones) and a charge level sensor (%). Add the usable capacity (**kWh**), the reserve and target charge to get time estimates. At least one sensor is required; each battery becomes its own device and can be changed or removed at any time.
 
-- **Right now:** state (charging, discharging, idle), charge and discharge power, load (smoothed over 10 minutes; also as a share of the maximum power if you set it), charge level, stored and usable energy (above the reserve), time to empty and time to full (with the estimated clock time in an attribute). Without a power sensor the power is derived from the energy counters, and failing that from the charge level trend (a rough estimate).
-- **Statistics** for the last 24 hours and 7 days (30 days is disabled by default), rolling windows read from Home Assistant's long-term statistics, so they are available immediately and survive restarts: energy charged and discharged, discharged-to-charged ratio (it is skewed by how much the charge level changed within the window, so look at the week), average and peak load, equivalent full cycles, runtime at the average load.
-- The energy and power sensors must record statistics (a `state_class`), as the Energy dashboard also requires. Without energy counters the energy is estimated from the average power in each 5-minute interval.
+- State (charging, discharging, idle), charge power and load (averaged over the last 5 minutes; also as a share of the maximum power if you set it), charge level, stored and usable energy (above the reserve), time to empty and time to full (with the estimated clock time in an attribute).
+- Without a power sensor the power is derived from the energy counters over the last 30 minutes (counters with a coarse step need the longer window), and failing that from the charge level trend (a rough estimate). A power sensor of the battery itself gives the most accurate and fastest values.
 
 ## Limitations
 - Uses the public, undocumented Yasno API; it may change without notice.

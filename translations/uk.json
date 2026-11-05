@@ -286,27 +286,6 @@
       },
       "battery_time_to_full": {
         "name": "Час до повного заряду"
-      },
-      "battery_charged": {
-        "name": "Заряджено ({period})"
-      },
-      "battery_discharged": {
-        "name": "Віддано ({period})"
-      },
-      "battery_ratio": {
-        "name": "Віддано до заряджено ({period})"
-      },
-      "battery_avg_load": {
-        "name": "Середнє навантаження ({period})"
-      },
-      "battery_peak_load": {
-        "name": "Пікове навантаження ({period})"
-      },
-      "battery_cycles": {
-        "name": "Еквівалентні цикли ({period})"
-      },
-      "battery_runtime_avg": {
-        "name": "Час роботи при середньому навантаженні ({period})"
       }
     },
     "binary_sensor": {

@@ -286,27 +286,6 @@
       },
       "battery_time_to_full": {
         "name": "Time to full"
-      },
-      "battery_charged": {
-        "name": "Charged ({period})"
-      },
-      "battery_discharged": {
-        "name": "Discharged ({period})"
-      },
-      "battery_ratio": {
-        "name": "Discharged to charged ({period})"
-      },
-      "battery_avg_load": {
-        "name": "Average load ({period})"
-      },
-      "battery_peak_load": {
-        "name": "Peak load ({period})"
-      },
-      "battery_cycles": {
-        "name": "Equivalent cycles ({period})"
-      },
-      "battery_runtime_avg": {
-        "name": "Runtime at average load ({period})"
       }
     },
     "binary_sensor": {

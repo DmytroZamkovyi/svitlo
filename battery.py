@@ -8,10 +8,9 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any
 
 IDLE_W = 20.0  # |power| below this counts as idle
-SMOOTH = timedelta(minutes=10)  # averaging window for the "current" load
+SMOOTH = timedelta(minutes=5)  # averaging window for the "current" load
 TREND = timedelta(minutes=30)  # look-back for power derived from counters / SoC
 MIN_TREND = timedelta(minutes=3)
 
@@ -173,36 +172,3 @@ class LiveBattery:
         if not maxw or d is None:
             return None
         return d / maxw * 100
-
-
-# ------------------------------------------------------------------- windows
-Bucket = tuple[float, float, float]  # (charged kWh, discharged kWh, hours)
-
-
-def window_metrics(
-    buckets: list[Bucket], cfg: BatteryConfig, peak_w: float | None
-) -> dict[str, Any]:
-    """Statistics over a rolling window from time buckets."""
-    keys = (
-        "charged", "discharged", "ratio", "cycles",
-        "avg_load", "runtime_avg", "peak_load",
-    )
-    if not buckets:
-        return {k: None for k in keys}
-    charged = sum(b[0] for b in buckets)
-    discharged = sum(b[1] for b in buckets)
-    dis_hours = sum(b[2] for b in buckets if b[1] > 1e-6)
-    avg_w = discharged * 1000 / dis_hours if dis_hours > 0 else None
-    cap = cfg.capacity_kwh
-    runtime = None
-    if cap and avg_w:
-        runtime = cap * (100 - cfg.reserve_pct) / 100 / (avg_w / 1000)
-    return {
-        "charged": round(charged, 2),
-        "discharged": round(discharged, 2),
-        "ratio": round(discharged / charged * 100, 1) if charged > 0.05 else None,
-        "cycles": round(discharged / cap, 2) if cap else None,
-        "avg_load": round(avg_w) if avg_w else None,
-        "runtime_avg": round(runtime, 2) if runtime else None,
-        "peak_load": round(peak_w) if peak_w else None,
-    }

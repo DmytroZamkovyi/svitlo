@@ -1,4 +1,4 @@
-"""Home Assistant glue for one battery: tracks sensors, reads recorder history."""
+"""Home Assistant glue for one battery: tracks its sensors and feeds the live model."""
 
 from __future__ import annotations
 
@@ -14,7 +14,6 @@ from homeassistant.helpers.event import (
     async_track_state_change_event,
     async_track_time_interval,
 )
-from homeassistant.helpers.start import async_at_started
 from homeassistant.util import dt as dt_util
 from homeassistant.util.unit_conversion import EnergyConverter, PowerConverter
 
@@ -42,14 +41,6 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 TICK = timedelta(minutes=1)
-STATS_EVERY = 5  # ticks
-# Rolling windows: key -> (length, recorder period)
-WINDOWS: dict[str, tuple[timedelta, str]] = {
-    "day": (timedelta(hours=24), "5minute"),
-    "week": (timedelta(days=7), "5minute"),
-    "month": (timedelta(days=30), "hour"),
-}
-BUCKET_HOURS = {"5minute": 5 / 60, "hour": 1.0}
 UNDECIDED = {"unknown", "unavailable", "none", ""}
 
 
@@ -95,9 +86,7 @@ class BatteryManager:
             max_discharge_w=d.get(CONF_BAT_MAX_POWER) or None,
         )
         self.live = battery.LiveBattery(self.cfg)
-        self.windows: dict[str, dict[str, Any]] = {}
         self.signal = f"{DOMAIN}_{entry.entry_id}_{sub.subentry_id}_battery"
-        self._ticks = 0
         self._unsubs: list[CALLBACK_TYPE] = []
 
     # ---------------------------------------------------------------- config
@@ -156,92 +145,11 @@ class BatteryManager:
     def _notify(self) -> None:
         async_dispatcher_send(self.hass, self.signal)
 
-    # --------------------------------------------------------------- history
-    async def _fetch_window(self, key: str) -> dict[str, Any]:
-        from homeassistant.components.recorder import get_instance
-        from homeassistant.components.recorder.statistics import (
-            statistics_during_period,
-        )
-
-        length, period = WINDOWS[key]
-        hours = BUCKET_HOURS[period]
-        end = dt_util.utcnow()
-        ids = [
-            i
-            for i in (self.energy_in_id, self.energy_out_id, *self._power_ids())
-            if i
-        ]
-        if not ids:
-            return battery.window_metrics([], self.cfg, None)
-        data = await get_instance(self.hass).async_add_executor_job(
-            statistics_during_period,
-            self.hass,
-            end - length,
-            end,
-            set(ids),
-            period,
-            {"energy": "kWh", "power": "W"},
-            {"change", "mean", "max", "min"},
-        )
-        starts: dict[float, list[float]] = {}  # start -> [charged, discharged]
-
-        def slot(row: dict[str, Any]) -> list[float]:
-            return starts.setdefault(float(row["start"]), [0.0, 0.0])
-
-        have_energy = False
-        for idx, sid in ((0, self.energy_in_id), (1, self.energy_out_id)):
-            for row in data.get(sid, []) if sid else []:
-                change = row.get("change")
-                if change is not None:
-                    have_energy = True
-                    slot(row)[idx] += max(change, 0.0)
-        peak: float | None = None
-
-        def mean_rows(sid: str | None):
-            return data.get(sid, []) if sid else []
-
-        if self.mode == POWER_MODE_TWO:
-            for idx, sid in ((0, self.power_in_id), (1, self.power_out_id)):
-                for row in mean_rows(sid):
-                    if idx == 1 and row.get("max") is not None:
-                        peak = max(peak or 0.0, row["max"])
-                    if not have_energy and row.get("mean") is not None:
-                        slot(row)[idx] += max(row["mean"], 0.0) * hours / 1000
-        elif self.mode in (POWER_MODE_STANDARD, POWER_MODE_INVERTED):
-            sign = 1.0 if self.mode == POWER_MODE_STANDARD else -1.0
-            for row in mean_rows(self.power_id):
-                hi, lo, mean = row.get("max"), row.get("min"), row.get("mean")
-                top = hi if sign > 0 else (-lo if lo is not None else None)
-                if top is not None:
-                    peak = max(peak or 0.0, top)
-                if not have_energy and mean is not None:
-                    watts = mean * sign
-                    slot(row)[1 if watts > 0 else 0] += abs(watts) * hours / 1000
-        buckets = [(v[0], v[1], hours) for _, v in sorted(starts.items())]
-        return battery.window_metrics(buckets, self.cfg, peak)
-
-    async def async_refresh_windows(self) -> None:
-        if "recorder" not in self.hass.config.components:
-            return
-        for key in WINDOWS:
-            try:
-                self.windows[key] = await self._fetch_window(key)
-            except Exception:  # noqa: BLE001
-                _LOGGER.debug("Battery %s: no history for %s", self.title, key, exc_info=True)
-        self._notify()
-
     # ------------------------------------------------------------- lifecycle
     async def _tick(self, _now: datetime) -> None:
         # Sample every minute so that flat counters read as "no flow", not "unknown"
         self._ingest()
-        self._ticks += 1
-        if self._ticks % STATS_EVERY == 0:
-            await self.async_refresh_windows()
-        else:
-            self._notify()
-
-    async def _first_refresh(self, _hass: HomeAssistant) -> None:
-        await self.async_refresh_windows()
+        self._notify()
 
     async def async_start(self) -> None:
         self._ingest()
@@ -250,8 +158,6 @@ class BatteryManager:
                 async_track_state_change_event(self.hass, ids, self._on_state)
             )
         self._unsubs.append(async_track_time_interval(self.hass, self._tick, TICK))
-        if unsub := async_at_started(self.hass, self._first_refresh):
-            self._unsubs.append(unsub)
 
     async def async_stop(self) -> None:
         for unsub in self._unsubs:
