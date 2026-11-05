@@ -232,6 +232,8 @@ class BatteryManager:
 
     # ------------------------------------------------------------- lifecycle
     async def _tick(self, _now: datetime) -> None:
+        # Sample every minute so that flat counters read as "no flow", not "unknown"
+        self._ingest()
         self._ticks += 1
         if self._ticks % STATS_EVERY == 0:
             await self.async_refresh_windows()

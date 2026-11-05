@@ -12,7 +12,7 @@ from typing import Any
 
 IDLE_W = 20.0  # |power| below this counts as idle
 SMOOTH = timedelta(minutes=10)  # averaging window for the "current" load
-TREND = timedelta(minutes=15)  # look-back for power derived from counters / SoC
+TREND = timedelta(minutes=30)  # look-back for power derived from counters / SoC
 MIN_TREND = timedelta(minutes=3)
 
 STATE_CHARGING = "charging"
