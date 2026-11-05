@@ -13,6 +13,7 @@ IDLE_W = 20.0  # |power| below this counts as idle
 SMOOTH = timedelta(minutes=5)  # averaging window for the "current" load
 TREND = timedelta(minutes=30)  # look-back for power derived from counters / SoC
 MIN_TREND = timedelta(minutes=3)
+OWN_MIN_W = 1.0  # own consumption is added only while a sensor shows a real discharge
 
 STATE_CHARGING = "charging"
 STATE_DISCHARGING = "discharging"
@@ -68,6 +69,13 @@ class LiveBattery:
             dq.popleft()
 
     # ------------------------------------------------------------------ power
+    def _with_own(self, watts: float) -> float:
+        """Add the unit's own draw only to a reading that shows a discharge.
+        On mains passthrough (battery full or charging) the battery gives nothing
+        and the own draw comes from the grid, so a 0 W reading stays 0 W."""
+        own = self.cfg.own_consumption_w or 0.0
+        return watts + own if watts >= OWN_MIN_W else watts
+
     def _measured(self, now: datetime) -> float | None:
         pts = list(self._power)
         if not pts:
@@ -79,9 +87,9 @@ class LiveBattery:
             s, e = max(t, lo), min(end, now)
             if e > s:
                 seconds = (e - s).total_seconds()
-                total += w * seconds
+                total += self._with_own(w) * seconds
                 dur += seconds
-        return total / dur if dur > 0 else pts[-1][1]
+        return total / dur if dur > 0 else self._with_own(pts[-1][1])
 
     def _from_energy(self, now: datetime) -> float | None:
         if len(self._energy) < 2:
@@ -109,12 +117,11 @@ class LiveBattery:
         """Signed power. smooth=False: the latest reading, smooth=True: the average
         of the last minutes. Without a power sensor both come from the energy
         counters or the charge trend, which are averages by nature."""
-        own = self.cfg.own_consumption_w or 0.0
         if not smooth and self._power:
-            return self._power[-1][1] + own
+            return self._with_own(self._power[-1][1])
         value = self._measured(now)
         if value is not None:
-            return value + own  # sensors miss the unit's own draw
+            return value  # own draw already added to discharge readings
         # counters and charge trend are measured on the battery side already
         for source in (self._from_energy, self._from_soc):
             value = source(now)
