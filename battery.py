@@ -26,6 +26,7 @@ class BatteryConfig:
     reserve_pct: float = 0.0
     target_pct: float = 100.0
     max_discharge_w: float | None = None
+    own_consumption_w: float = 0.0  # inverter/display draw the power sensors do not show
 
 
 class LiveBattery:
@@ -108,9 +109,14 @@ class LiveBattery:
         """Signed power. smooth=False: the latest reading, smooth=True: the average
         of the last minutes. Without a power sensor both come from the energy
         counters or the charge trend, which are averages by nature."""
+        own = self.cfg.own_consumption_w or 0.0
         if not smooth and self._power:
-            return self._power[-1][1]
-        for source in (self._measured, self._from_energy, self._from_soc):
+            return self._power[-1][1] + own
+        value = self._measured(now)
+        if value is not None:
+            return value + own  # sensors miss the unit's own draw
+        # counters and charge trend are measured on the battery side already
+        for source in (self._from_energy, self._from_soc):
             value = source(now)
             if value is not None:
                 return value

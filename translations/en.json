@@ -364,13 +364,15 @@
             "power_mode": "Power sensor",
             "reserve": "Minimum charge (reserve), %",
             "target": "Target charge, %",
-            "max_power": "Maximum discharge power, W"
+            "max_power": "Maximum discharge power, W",
+            "own_consumption": "Unit own consumption, W"
           },
           "data_description": {
             "energy_in": "A cumulative counter (kWh or Wh).",
             "energy_out": "A cumulative counter (kWh or Wh).",
             "reserve": "Below this level the battery counts as empty when estimating runtime.",
-            "max_power": "Used for the load percentage."
+            "max_power": "Used for the load percentage.",
+            "own_consumption": "What the unit itself (inverter, display, Wi-Fi) draws from the battery on top of what the power sensors show. Added to the measured power. Not needed when power comes from the energy counters. Tune it against the time to empty shown on the unit."
           }
         },
         "reconfigure": {
@@ -385,7 +387,8 @@
             "power_mode": "Power sensor",
             "reserve": "Minimum charge (reserve), %",
             "target": "Target charge, %",
-            "max_power": "Maximum discharge power, W"
+            "max_power": "Maximum discharge power, W",
+            "own_consumption": "Unit own consumption, W"
           }
         },
         "power": {

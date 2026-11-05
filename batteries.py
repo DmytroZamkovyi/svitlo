@@ -23,6 +23,7 @@ from .const import (
     CONF_BAT_ENERGY_IN,
     CONF_BAT_ENERGY_OUT,
     CONF_BAT_MAX_POWER,
+    CONF_BAT_OWN_CONSUMPTION,
     CONF_BAT_POWER,
     CONF_BAT_POWER_IN,
     CONF_BAT_POWER_MODE,
@@ -84,6 +85,7 @@ class BatteryManager:
             reserve_pct=float(d.get(CONF_BAT_RESERVE, DEFAULT_BAT_RESERVE)),
             target_pct=float(d.get(CONF_BAT_TARGET, DEFAULT_BAT_TARGET)),
             max_discharge_w=d.get(CONF_BAT_MAX_POWER) or None,
+            own_consumption_w=float(d.get(CONF_BAT_OWN_CONSUMPTION) or 0),
         )
         self.live = battery.LiveBattery(self.cfg)
         self.signal = f"{DOMAIN}_{entry.entry_id}_{sub.subentry_id}_battery"

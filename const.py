@@ -75,6 +75,7 @@ CONF_BAT_POWER_OUT = "power_out"
 CONF_BAT_RESERVE = "reserve"  # %
 CONF_BAT_TARGET = "target"  # %
 CONF_BAT_MAX_POWER = "max_power"  # W
+CONF_BAT_OWN_CONSUMPTION = "own_consumption"  # W, unit's own draw
 
 POWER_MODE_NONE = "none"
 POWER_MODE_STANDARD = "standard"  # one sensor, positive = discharging

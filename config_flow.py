@@ -42,6 +42,7 @@ from .const import (
     CONF_BAT_ENERGY_IN,
     CONF_BAT_ENERGY_OUT,
     CONF_BAT_MAX_POWER,
+    CONF_BAT_OWN_CONSUMPTION,
     CONF_BAT_POWER,
     CONF_BAT_POWER_IN,
     CONF_BAT_POWER_MODE,
@@ -515,6 +516,7 @@ class BatterySubentryFlow(ConfigSubentryFlow):
                     CONF_BAT_TARGET, default=DEFAULT_BAT_TARGET
                 ): _float(10, 100, 1),
                 vol.Optional(CONF_BAT_MAX_POWER): _float(1, 1_000_000, 1),
+                vol.Optional(CONF_BAT_OWN_CONSUMPTION): _float(0, 1000, 1),
             }
         )
         suggested = {**self._data, CONF_NAME: self._title}
