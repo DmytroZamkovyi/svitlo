@@ -96,10 +96,10 @@
       "name": "Power"
     },
     "stats_today": {
-      "name": "Statistics: today"
+      "name": "Statistics: last 24 hours"
     },
     "stats_yesterday": {
-      "name": "Statistics: yesterday"
+      "name": "Statistics: previous 24 hours"
     },
     "stats_week": {
       "name": "Statistics: 7 days"

@@ -86,14 +86,16 @@ def _circular_mean_hhmm(minutes: list[float]) -> str | None:
 def period_bounds(
     key: str, now: datetime, tz: tzinfo
 ) -> tuple[datetime | None, datetime]:
-    """(start, end) of a statistics period. start None = from the beginning."""
-    midnight = datetime.combine(now.astimezone(tz).date(), time(0, 0), tzinfo=tz)
+    """(start, end) of a statistics period. start None = from the beginning.
+
+    All periods are rolling windows ending now, not calendar days:
+    today = the last 24 hours, yesterday = the 24 hours before that,
+    week = the last 7x24 hours, month = the last 30x24 hours.
+    """
     if key == "today":
-        return midnight, now
+        return now - timedelta(hours=24), now
     if key == "yesterday":
-        return datetime.combine(
-            midnight.date() - timedelta(days=1), time(0, 0), tzinfo=tz
-        ), midnight
+        return now - timedelta(hours=48), now - timedelta(hours=24)
     if key == "week":
         return now - timedelta(days=7), now
     if key == "month":
