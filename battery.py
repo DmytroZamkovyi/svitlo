@@ -104,16 +104,20 @@ class LiveBattery:
         dt = (new[0] - old[0]).total_seconds() / 3600
         return -(new[1] - old[1]) / 100 * cap * 1000 / dt
 
-    def power_w(self, now: datetime) -> float | None:
-        """Smoothed signed power; measured > energy counters > SoC trend."""
+    def power_w(self, now: datetime, smooth: bool = True) -> float | None:
+        """Signed power. smooth=False: the latest reading, smooth=True: the average
+        of the last minutes. Without a power sensor both come from the energy
+        counters or the charge trend, which are averages by nature."""
+        if not smooth and self._power:
+            return self._power[-1][1]
         for source in (self._measured, self._from_energy, self._from_soc):
             value = source(now)
             if value is not None:
                 return value
         return None
 
-    def state(self, now: datetime) -> str:
-        p = self.power_w(now)
+    def state(self, now: datetime, smooth: bool = True) -> str:
+        p = self.power_w(now, smooth)
         if p is None:
             return STATE_UNKNOWN
         if p > IDLE_W:
@@ -122,12 +126,12 @@ class LiveBattery:
             return STATE_CHARGING
         return STATE_IDLE
 
-    def discharge_w(self, now: datetime) -> float | None:
-        p = self.power_w(now)
+    def discharge_w(self, now: datetime, smooth: bool = True) -> float | None:
+        p = self.power_w(now, smooth)
         return None if p is None else max(p, 0.0)
 
-    def charge_w(self, now: datetime) -> float | None:
-        p = self.power_w(now)
+    def charge_w(self, now: datetime, smooth: bool = True) -> float | None:
+        p = self.power_w(now, smooth)
         return None if p is None else max(-p, 0.0)
 
     # ----------------------------------------------------------------- energy
@@ -143,32 +147,32 @@ class LiveBattery:
             return None
         return cap * max(self.soc - self.cfg.reserve_pct, 0.0) / 100
 
-    def time_to_empty_h(self, now: datetime) -> float | None:
+    def time_to_empty_h(self, now: datetime, smooth: bool = True) -> float | None:
         usable = self.usable_kwh()
         if usable is None:
             return None
         if usable <= 0:
             return 0.0
-        p = self.power_w(now)
+        p = self.power_w(now, smooth)
         if p is None or p <= IDLE_W:
             return None
         return usable / (p / 1000)
 
-    def time_to_full_h(self, now: datetime) -> float | None:
+    def time_to_full_h(self, now: datetime, smooth: bool = True) -> float | None:
         cap = self.cfg.capacity_kwh
         if self.soc is None or not cap:
             return None
         missing = cap * max(self.cfg.target_pct - self.soc, 0.0) / 100
         if missing <= 0:
             return 0.0
-        p = self.power_w(now)
+        p = self.power_w(now, smooth)
         if p is None or p >= -IDLE_W:
             return None
         return missing / (-p / 1000)
 
-    def load_percent(self, now: datetime) -> float | None:
+    def load_percent(self, now: datetime, smooth: bool = True) -> float | None:
         maxw = self.cfg.max_discharge_w
-        d = self.discharge_w(now)
+        d = self.discharge_w(now, smooth)
         if not maxw or d is None:
             return None
         return d / maxw * 100

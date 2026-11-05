@@ -109,6 +109,12 @@
     },
     "stats_all": {
       "name": "Статистика: весь час"
+    },
+    "battery_now": {
+      "name": "{name}: зараз"
+    },
+    "battery_avg": {
+      "name": "{name}: за 5 хв"
     }
   },
   "entity": {

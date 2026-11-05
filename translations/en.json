@@ -109,6 +109,12 @@
     },
     "stats_all": {
       "name": "Statistics: all time"
+    },
+    "battery_now": {
+      "name": "{name}: now"
+    },
+    "battery_avg": {
+      "name": "{name}: 5-minute average"
     }
   },
   "entity": {

@@ -387,6 +387,7 @@ class BatteryDescription(SensorEntityDescription):
 
     value_fn: Callable[[BatteryManager, datetime], Any]
     attrs_fn: Callable[[BatteryManager, datetime], dict[str, Any]] | None = None
+    group: str = "now"
 
 
 def _rounded(value: float | None, digits: int = 0) -> float | int | None:
@@ -397,14 +398,16 @@ def _eta(hours: float | None, now: datetime) -> dict[str, Any]:
     return {"estimated_at": (now + timedelta(hours=hours)).isoformat()} if hours else {}
 
 
-def battery_entities(manager: BatteryManager) -> list[SensorEntity]:
-    """Sensors for the sensors and parameters configured for this battery."""
-    cap = manager.cfg.capacity_kwh
-    has_soc = manager.soc_id is not None
-    descriptions: list[BatteryDescription] = [
+def _power_group(manager: BatteryManager, group: str) -> list[BatteryDescription]:
+    """Sensors that depend on the power reading: latest ("now") or 5-minute average."""
+    smooth = group == "avg"
+    prefix = "avg_" if smooth else ""
+    has_soc_cap = manager.soc_id is not None and bool(manager.cfg.capacity_kwh)
+    out: list[BatteryDescription] = [
         BatteryDescription(
-            key="state",
+            key=f"{prefix}state",
             translation_key="battery_state",
+            group=group,
             device_class=SensorDeviceClass.ENUM,
             options=[
                 bat.STATE_CHARGING,
@@ -412,39 +415,73 @@ def battery_entities(manager: BatteryManager) -> list[SensorEntity]:
                 bat.STATE_IDLE,
                 bat.STATE_UNKNOWN,
             ],
-            value_fn=lambda m, now: m.live.state(now),
+            value_fn=lambda m, now: m.live.state(now, smooth),
         ),
         BatteryDescription(
-            key="charge_power",
+            key=f"{prefix}charge_power",
             translation_key="battery_charge_power",
+            group=group,
             device_class=SensorDeviceClass.POWER,
             native_unit_of_measurement=UnitOfPower.WATT,
             state_class=SensorStateClass.MEASUREMENT,
             suggested_display_precision=0,
-            value_fn=lambda m, now: _rounded(m.live.charge_w(now)),
+            value_fn=lambda m, now: _rounded(m.live.charge_w(now, smooth)),
         ),
         BatteryDescription(
-            key="load",
+            key=f"{prefix}load",
             translation_key="battery_load",
+            group=group,
             device_class=SensorDeviceClass.POWER,
             native_unit_of_measurement=UnitOfPower.WATT,
             state_class=SensorStateClass.MEASUREMENT,
             suggested_display_precision=0,
-            value_fn=lambda m, now: _rounded(m.live.discharge_w(now)),
+            value_fn=lambda m, now: _rounded(m.live.discharge_w(now, smooth)),
         ),
     ]
     if manager.cfg.max_discharge_w:
-        descriptions.append(
+        out.append(
             BatteryDescription(
-                key="load_percent",
+                key=f"{prefix}load_percent",
                 translation_key="battery_load_percent",
+                group=group,
                 native_unit_of_measurement=PERCENTAGE,
                 state_class=SensorStateClass.MEASUREMENT,
                 suggested_display_precision=0,
-                value_fn=lambda m, now: _rounded(m.live.load_percent(now)),
+                value_fn=lambda m, now: _rounded(m.live.load_percent(now, smooth)),
             )
         )
-    if has_soc:
+    if has_soc_cap:
+        out += [
+            BatteryDescription(
+                key=f"{prefix}time_to_empty",
+                translation_key="battery_time_to_empty",
+                group=group,
+                device_class=SensorDeviceClass.DURATION,
+                native_unit_of_measurement=UnitOfTime.HOURS,
+                state_class=SensorStateClass.MEASUREMENT,
+                suggested_display_precision=1,
+                value_fn=lambda m, now: _rounded(m.live.time_to_empty_h(now, smooth), 2),
+                attrs_fn=lambda m, now: _eta(m.live.time_to_empty_h(now, smooth), now),
+            ),
+            BatteryDescription(
+                key=f"{prefix}time_to_full",
+                translation_key="battery_time_to_full",
+                group=group,
+                device_class=SensorDeviceClass.DURATION,
+                native_unit_of_measurement=UnitOfTime.HOURS,
+                state_class=SensorStateClass.MEASUREMENT,
+                suggested_display_precision=1,
+                value_fn=lambda m, now: _rounded(m.live.time_to_full_h(now, smooth), 2),
+                attrs_fn=lambda m, now: _eta(m.live.time_to_full_h(now, smooth), now),
+            ),
+        ]
+    return out
+
+
+def battery_entities(manager: BatteryManager) -> list[SensorEntity]:
+    """Two devices per battery: the latest readings and the 5-minute averages."""
+    descriptions = _power_group(manager, "now")
+    if manager.soc_id is not None:
         descriptions.append(
             BatteryDescription(
                 key="soc",
@@ -455,47 +492,28 @@ def battery_entities(manager: BatteryManager) -> list[SensorEntity]:
                 value_fn=lambda m, now: m.live.soc,
             )
         )
-    if has_soc and cap:
-        descriptions += [
-            BatteryDescription(
-                key="stored_energy",
-                translation_key="battery_stored_energy",
-                device_class=SensorDeviceClass.ENERGY_STORAGE,
-                native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
-                state_class=SensorStateClass.MEASUREMENT,
-                suggested_display_precision=2,
-                value_fn=lambda m, now: _rounded(m.live.stored_kwh(), 2),
-            ),
-            BatteryDescription(
-                key="usable_energy",
-                translation_key="battery_usable_energy",
-                device_class=SensorDeviceClass.ENERGY_STORAGE,
-                native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
-                state_class=SensorStateClass.MEASUREMENT,
-                suggested_display_precision=2,
-                value_fn=lambda m, now: _rounded(m.live.usable_kwh(), 2),
-            ),
-            BatteryDescription(
-                key="time_to_empty",
-                translation_key="battery_time_to_empty",
-                device_class=SensorDeviceClass.DURATION,
-                native_unit_of_measurement=UnitOfTime.HOURS,
-                state_class=SensorStateClass.MEASUREMENT,
-                suggested_display_precision=1,
-                value_fn=lambda m, now: _rounded(m.live.time_to_empty_h(now), 2),
-                attrs_fn=lambda m, now: _eta(m.live.time_to_empty_h(now), now),
-            ),
-            BatteryDescription(
-                key="time_to_full",
-                translation_key="battery_time_to_full",
-                device_class=SensorDeviceClass.DURATION,
-                native_unit_of_measurement=UnitOfTime.HOURS,
-                state_class=SensorStateClass.MEASUREMENT,
-                suggested_display_precision=1,
-                value_fn=lambda m, now: _rounded(m.live.time_to_full_h(now), 2),
-                attrs_fn=lambda m, now: _eta(m.live.time_to_full_h(now), now),
-            ),
-        ]
+        if manager.cfg.capacity_kwh:
+            descriptions += [
+                BatteryDescription(
+                    key="stored_energy",
+                    translation_key="battery_stored_energy",
+                    device_class=SensorDeviceClass.ENERGY_STORAGE,
+                    native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+                    state_class=SensorStateClass.MEASUREMENT,
+                    suggested_display_precision=2,
+                    value_fn=lambda m, now: _rounded(m.live.stored_kwh(), 2),
+                ),
+                BatteryDescription(
+                    key="usable_energy",
+                    translation_key="battery_usable_energy",
+                    device_class=SensorDeviceClass.ENERGY_STORAGE,
+                    native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+                    state_class=SensorStateClass.MEASUREMENT,
+                    suggested_display_precision=2,
+                    value_fn=lambda m, now: _rounded(m.live.usable_kwh(), 2),
+                ),
+            ]
+    descriptions += _power_group(manager, "avg")
     return [BatterySensor(manager, d) for d in descriptions]
 
 
@@ -513,8 +531,9 @@ class BatterySensor(SensorEntity):
             f"{manager.entry.entry_id}_{manager.subentry_id}_{description.key}"
         )
         self._attr_device_info = DeviceInfo(
-            identifiers={manager.device_identifier()},
-            name=manager.title,
+            identifiers={manager.device_identifier(description.group)},
+            translation_key=f"battery_{description.group}",
+            translation_placeholders={"name": manager.title},
             manufacturer="Svitlo",
             model="Battery",
             entry_type=DeviceEntryType.SERVICE,

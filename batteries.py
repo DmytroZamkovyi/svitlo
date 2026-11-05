@@ -164,5 +164,7 @@ class BatteryManager:
             unsub()
         self._unsubs.clear()
 
-    def device_identifier(self) -> tuple[str, str]:
-        return (DOMAIN, f"{self.entry.entry_id}_battery_{self.subentry_id}")
+    def device_identifier(self, group: str) -> tuple[str, str]:
+        """group: "now" (latest readings) or "avg" (averaged over 5 minutes)."""
+        suffix = "" if group == "now" else f"_{group}"
+        return (DOMAIN, f"{self.entry.entry_id}_battery_{self.subentry_id}{suffix}")

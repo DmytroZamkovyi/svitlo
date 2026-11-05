@@ -34,8 +34,10 @@ Calendar events have stable `uid`s, so another tool can mirror them to an extern
 
 Open the integration and use **Add battery** (as many as you like). Pick sensors the same way as in the Energy dashboard: the energy going into the battery (charge) and coming out of it (discharge), optionally a power sensor (one sensor, positive = discharging or charging, or two separate ones) and a charge level sensor (%). Add the usable capacity (**kWh**), the reserve and target charge to get time estimates. At least one sensor is required; each battery becomes its own device and can be changed or removed at any time.
 
-- State (charging, discharging, idle), charge power and load (averaged over the last 5 minutes; also as a share of the maximum power if you set it), charge level, stored and usable energy (above the reserve), time to empty and time to full (with the estimated clock time in an attribute).
-- Without a power sensor the power is derived from the energy counters over the last 30 minutes (counters with a coarse step need the longer window), and failing that from the charge level trend (a rough estimate). A power sensor of the battery itself gives the most accurate and fastest values.
+Each battery gets two devices:
+- **Now** (the latest readings): state (charging, discharging, idle), charge power, load (also as a share of the maximum power if you set it), time to empty and time to full at the current load (with the estimated clock time in an attribute), plus charge level, stored energy and usable energy above the reserve.
+- **5-minute average**: the same state, powers, load share and time estimates, but averaged over the last 5 minutes, so they do not jump with short load spikes.
+- Without a power sensor the power is derived from the energy counters over the last 30 minutes (counters with a coarse step need the longer window), and failing that from the charge level trend (a rough estimate). Both devices then show the same smoothed value. A power sensor of the battery itself gives the most accurate values and the real difference between the two devices.
 
 ## Limitations
 - Uses the public, undocumented Yasno API; it may change without notice.
