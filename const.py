@@ -61,3 +61,26 @@ EVENT_TYPES = [
 # Repair issues
 ISSUE_ADDRESS_NOT_FOUND = "address_not_found"
 ISSUE_STALE_DATA = "stale_data"
+
+# Battery sub-entries (one per battery)
+SUBENTRY_BATTERY = "battery"
+CONF_BAT_CAPACITY = "capacity"  # kWh, usable
+CONF_BAT_SOC = "soc"
+CONF_BAT_ENERGY_IN = "energy_in"  # energy going into the battery (charge)
+CONF_BAT_ENERGY_OUT = "energy_out"  # energy coming out of the battery (discharge)
+CONF_BAT_POWER_MODE = "power_mode"
+CONF_BAT_POWER = "power"
+CONF_BAT_POWER_IN = "power_in"
+CONF_BAT_POWER_OUT = "power_out"
+CONF_BAT_RESERVE = "reserve"  # %
+CONF_BAT_TARGET = "target"  # %
+CONF_BAT_MAX_POWER = "max_power"  # W
+
+POWER_MODE_NONE = "none"
+POWER_MODE_STANDARD = "standard"  # one sensor, positive = discharging
+POWER_MODE_INVERTED = "inverted"  # one sensor, positive = charging
+POWER_MODE_TWO = "two"  # separate charge and discharge sensors
+POWER_MODES = [POWER_MODE_NONE, POWER_MODE_STANDARD, POWER_MODE_INVERTED, POWER_MODE_TWO]
+
+DEFAULT_BAT_RESERVE = 10
+DEFAULT_BAT_TARGET = 100

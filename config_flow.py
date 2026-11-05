@@ -10,12 +10,18 @@ from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
+    ConfigSubentryFlow,
     OptionsFlowWithReload,
+    SubentryFlowResult,
 )
+from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
+    EntitySelector,
+    EntitySelectorConfig,
+    TextSelectorConfig,
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
@@ -32,6 +38,17 @@ from .api import AddressNotFoundError, YasnoClient, YasnoError, item_name
 from .const import (
     CONF_ADDRESS_FAIL_LIMIT,
     CONF_ADDRESS_INTERVAL,
+    CONF_BAT_CAPACITY,
+    CONF_BAT_ENERGY_IN,
+    CONF_BAT_ENERGY_OUT,
+    CONF_BAT_MAX_POWER,
+    CONF_BAT_POWER,
+    CONF_BAT_POWER_IN,
+    CONF_BAT_POWER_MODE,
+    CONF_BAT_POWER_OUT,
+    CONF_BAT_RESERVE,
+    CONF_BAT_SOC,
+    CONF_BAT_TARGET,
     CONF_DELAY_OFF,
     CONF_DELAY_ON,
     CONF_DSO_ID,
@@ -50,6 +67,8 @@ from .const import (
     CONF_SUBGROUP,
     DEFAULT_ADDRESS_FAIL_LIMIT,
     DEFAULT_ADDRESS_INTERVAL,
+    DEFAULT_BAT_RESERVE,
+    DEFAULT_BAT_TARGET,
     DEFAULT_DELAY_OFF,
     DEFAULT_DELAY_ON,
     DEFAULT_MATCH_MIN_OVERLAP,
@@ -57,6 +76,10 @@ from .const import (
     DEFAULT_RETENTION_DAYS,
     DEFAULT_SCHEDULE_INTERVAL,
     DOMAIN,
+    POWER_MODE_NONE,
+    POWER_MODE_TWO,
+    POWER_MODES,
+    SUBENTRY_BATTERY,
 )
 from .tracker import parse_bool
 
@@ -109,6 +132,13 @@ class SvitloConfigFlow(ConfigFlow, domain=DOMAIN):
     @property
     def _client(self) -> YasnoClient:
         return YasnoClient(async_get_clientsession(self.hass))
+
+    @classmethod
+    @callback
+    def async_get_supported_subentry_types(
+        cls, config_entry: ConfigEntry
+    ) -> dict[str, type[ConfigSubentryFlow]]:
+        return {SUBENTRY_BATTERY: BatterySubentryFlow}
 
     @staticmethod
     @callback
@@ -403,3 +433,144 @@ class SvitloOptionsFlow(OptionsFlowWithReload):
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
+
+
+def _sensor(device_class: str) -> EntitySelector:
+    return EntitySelector(EntitySelectorConfig(domain="sensor", device_class=device_class))
+
+
+def _float(minimum: float, maximum: float, step: float = 0.1) -> NumberSelector:
+    return NumberSelector(
+        NumberSelectorConfig(
+            min=minimum, max=maximum, step=step, mode=NumberSelectorMode.BOX
+        )
+    )
+
+
+class BatterySubentryFlow(ConfigSubentryFlow):
+    """Add or change one battery. Sensors are picked like in the Energy dashboard."""
+
+    def __init__(self) -> None:
+        self._data: dict[str, Any] = {}
+        self._title = ""
+
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        return await self._main("user", user_input)
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        if not self._data and user_input is None:
+            sub = self._get_reconfigure_subentry()
+            self._data = dict(sub.data)
+            self._title = sub.title
+        return await self._main("reconfigure", user_input)
+
+    async def _main(
+        self, step_id: str, user_input: dict[str, Any] | None
+    ) -> SubentryFlowResult:
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            # Cleared optional fields are simply absent from the input
+            keep = {CONF_BAT_POWER, CONF_BAT_POWER_IN, CONF_BAT_POWER_OUT}
+            self._data = {k: v for k, v in self._data.items() if k in keep}
+            self._data.update(user_input)
+            self._title = user_input[CONF_NAME].strip()
+            self._data.pop(CONF_NAME)
+            if not any(
+                self._data.get(k)
+                for k in (CONF_BAT_SOC, CONF_BAT_ENERGY_IN, CONF_BAT_ENERGY_OUT)
+            ) and self._data.get(CONF_BAT_POWER_MODE, POWER_MODE_NONE) == POWER_MODE_NONE:
+                errors["base"] = "no_sensors"
+            elif self._data.get(CONF_BAT_TARGET, 100) <= self._data.get(
+                CONF_BAT_RESERVE, 0
+            ):
+                errors["base"] = "target_below_reserve"
+            else:
+                if self._data.get(CONF_BAT_POWER_MODE, POWER_MODE_NONE) != POWER_MODE_NONE:
+                    return await self.async_step_power()
+                return self._finish()
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_NAME): TextSelector(TextSelectorConfig()),
+                vol.Optional(CONF_BAT_CAPACITY): _float(0.1, 10000, 0.01),
+                vol.Optional(CONF_BAT_SOC): _sensor("battery"),
+                vol.Optional(CONF_BAT_ENERGY_IN): _sensor("energy"),
+                vol.Optional(CONF_BAT_ENERGY_OUT): _sensor("energy"),
+                vol.Required(
+                    CONF_BAT_POWER_MODE, default=POWER_MODE_NONE
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=POWER_MODES,
+                        mode=SelectSelectorMode.DROPDOWN,
+                        translation_key="battery_power_mode",
+                    )
+                ),
+                vol.Required(
+                    CONF_BAT_RESERVE, default=DEFAULT_BAT_RESERVE
+                ): _float(0, 90, 1),
+                vol.Required(
+                    CONF_BAT_TARGET, default=DEFAULT_BAT_TARGET
+                ): _float(10, 100, 1),
+                vol.Optional(CONF_BAT_MAX_POWER): _float(1, 1_000_000, 1),
+            }
+        )
+        suggested = {**self._data, CONF_NAME: self._title}
+        if user_input is not None:
+            suggested = {**suggested, **user_input}
+        return self.async_show_form(
+            step_id=step_id,
+            data_schema=self.add_suggested_values_to_schema(schema, suggested),
+            errors=errors,
+        )
+
+    async def async_step_power(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        mode = self._data.get(CONF_BAT_POWER_MODE, POWER_MODE_NONE)
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            for key in (CONF_BAT_POWER, CONF_BAT_POWER_IN, CONF_BAT_POWER_OUT):
+                self._data.pop(key, None)
+            self._data.update(user_input)
+            if mode == POWER_MODE_TWO and not (
+                self._data.get(CONF_BAT_POWER_IN) and self._data.get(CONF_BAT_POWER_OUT)
+            ):
+                errors["base"] = "two_power_sensors"
+            else:
+                return self._finish()
+        if mode == POWER_MODE_TWO:
+            fields = {
+                vol.Required(CONF_BAT_POWER_OUT): _sensor("power"),
+                vol.Required(CONF_BAT_POWER_IN): _sensor("power"),
+            }
+        else:
+            fields = {vol.Required(CONF_BAT_POWER): _sensor("power")}
+        suggested = {**self._data, **(user_input or {})}
+        return self.async_show_form(
+            step_id="power",
+            data_schema=self.add_suggested_values_to_schema(vol.Schema(fields), suggested),
+            description_placeholders={"mode": mode},
+            errors=errors,
+        )
+
+    def _finish(self) -> SubentryFlowResult:
+        mode = self._data.get(CONF_BAT_POWER_MODE, POWER_MODE_NONE)
+        if mode == POWER_MODE_NONE:
+            for key in (CONF_BAT_POWER, CONF_BAT_POWER_IN, CONF_BAT_POWER_OUT):
+                self._data.pop(key, None)
+        elif mode != POWER_MODE_TWO:
+            self._data.pop(CONF_BAT_POWER_IN, None)
+            self._data.pop(CONF_BAT_POWER_OUT, None)
+        else:
+            self._data.pop(CONF_BAT_POWER, None)
+        if self.source == "reconfigure":
+            return self.async_update_and_abort(
+                self._get_entry(),
+                self._get_reconfigure_subentry(),
+                title=self._title,
+                data=self._data,
+            )
+        return self.async_create_entry(title=self._title, data=self._data)

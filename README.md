@@ -30,6 +30,14 @@ Street/house IDs and the group change in Yasno over time, so they are re-resolve
 
 Calendar events have stable `uid`s, so another tool can mirror them to an external calendar.
 
+## Batteries
+
+Open the integration and use **Add battery** (as many as you like). Pick sensors the same way as in the Energy dashboard: the energy going into the battery (charge) and coming out of it (discharge), optionally a power sensor (one sensor, positive = discharging or charging, or two separate ones) and a charge level sensor (%). Add the usable capacity (kWh), the reserve and target charge to get time estimates. At least one sensor is required; each battery becomes its own device and can be changed or removed at any time.
+
+- **Right now:** state (charging, discharging, idle), charge and discharge power, load (smoothed over 10 minutes; also as a share of the maximum power if you set it), charge level, stored and usable energy (above the reserve), time to empty and time to full (with the estimated clock time in an attribute). Without a power sensor the power is derived from the energy counters, and failing that from the charge level trend (a rough estimate).
+- **Statistics** for the last 24 hours and 7 days (30 days is disabled by default), rolling windows read from Home Assistant's long-term statistics, so they are available immediately and survive restarts: energy charged and discharged, discharged-to-charged ratio (it is skewed by how much the charge level changed within the window, so look at the week), average and peak load, equivalent full cycles, runtime at the average load.
+- The energy and power sensors must record statistics (a `state_class`), as the Energy dashboard also requires. Without energy counters the energy is estimated from the average power in each 5-minute interval.
+
 ## Limitations
 - Uses the public, undocumented Yasno API; it may change without notice.
 - If Home Assistant is down during an outage, the outage start is the moment HA came back.

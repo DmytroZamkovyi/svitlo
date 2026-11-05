@@ -253,6 +253,60 @@
       },
       "today_planned_outage_remaining": {
         "name": "Today: scheduled outage time left"
+      },
+      "battery_state": {
+        "name": "State",
+        "state": {
+          "charging": "Charging",
+          "discharging": "Discharging",
+          "idle": "Idle",
+          "unknown": "Unknown"
+        }
+      },
+      "battery_charge_power": {
+        "name": "Charge power"
+      },
+      "battery_load": {
+        "name": "Load"
+      },
+      "battery_load_percent": {
+        "name": "Load, % of maximum"
+      },
+      "battery_soc": {
+        "name": "Charge level"
+      },
+      "battery_stored_energy": {
+        "name": "Stored energy"
+      },
+      "battery_usable_energy": {
+        "name": "Usable energy (above reserve)"
+      },
+      "battery_time_to_empty": {
+        "name": "Time to empty"
+      },
+      "battery_time_to_full": {
+        "name": "Time to full"
+      },
+      "battery_charged": {
+        "name": "Charged ({period})"
+      },
+      "battery_discharged": {
+        "name": "Discharged ({period})"
+      },
+      "battery_ratio": {
+        "name": "Discharged to charged ({period})"
+      },
+      "battery_avg_load": {
+        "name": "Average load ({period})"
+      },
+      "battery_peak_load": {
+        "name": "Peak load ({period})"
+      },
+      "battery_cycles": {
+        "name": "Equivalent cycles ({period})"
+      },
+      "battery_runtime_avg": {
+        "name": "Runtime at average load ({period})"
       }
     },
     "binary_sensor": {
@@ -304,6 +358,79 @@
     "stale_data": {
       "title": "Schedule data is stale",
       "description": "The Yasno schedule could not be updated several times in a row. The last received data is shown."
+    }
+  },
+  "config_subentries": {
+    "battery": {
+      "initiate_flow": {
+        "user": "Add battery"
+      },
+      "entry_type": "Battery",
+      "step": {
+        "user": {
+          "title": "Battery",
+          "description": "Pick sensors the same way as in the Energy dashboard. At least one sensor is required. Time to empty and time to full need the capacity and a charge level sensor.",
+          "data": {
+            "name": "Name",
+            "capacity": "Usable capacity, kWh",
+            "soc": "Charge level, %",
+            "energy_in": "Energy going into the battery (charge)",
+            "energy_out": "Energy coming out of the battery (discharge)",
+            "power_mode": "Power sensor",
+            "reserve": "Minimum charge (reserve), %",
+            "target": "Target charge, %",
+            "max_power": "Maximum discharge power, W"
+          },
+          "data_description": {
+            "energy_in": "A cumulative counter (kWh or Wh).",
+            "energy_out": "A cumulative counter (kWh or Wh).",
+            "reserve": "Below this level the battery counts as empty when estimating runtime.",
+            "max_power": "Used for the load percentage."
+          }
+        },
+        "reconfigure": {
+          "title": "Battery",
+          "description": "Change the battery's sensors and parameters.",
+          "data": {
+            "name": "Name",
+            "capacity": "Usable capacity, kWh",
+            "soc": "Charge level, %",
+            "energy_in": "Energy going into the battery (charge)",
+            "energy_out": "Energy coming out of the battery (discharge)",
+            "power_mode": "Power sensor",
+            "reserve": "Minimum charge (reserve), %",
+            "target": "Target charge, %",
+            "max_power": "Maximum discharge power, W"
+          }
+        },
+        "power": {
+          "title": "Power sensor",
+          "description": "With the standard option a positive value means discharging, with inverted it means charging.",
+          "data": {
+            "power": "Power sensor",
+            "power_out": "Discharge power",
+            "power_in": "Charge power"
+          }
+        }
+      },
+      "error": {
+        "no_sensors": "Pick at least one sensor: charge level, energy or power.",
+        "target_below_reserve": "The target charge must be higher than the reserve.",
+        "two_power_sensors": "Two sensors need both a discharge and a charge sensor."
+      },
+      "abort": {
+        "reconfigure_successful": "Battery updated."
+      }
+    }
+  },
+  "selector": {
+    "battery_power_mode": {
+      "options": {
+        "none": "None",
+        "standard": "One sensor: positive = discharging",
+        "inverted": "One sensor: positive = charging",
+        "two": "Two sensors: discharge and charge"
+      }
     }
   }
 }

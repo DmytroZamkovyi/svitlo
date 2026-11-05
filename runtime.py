@@ -21,13 +21,24 @@ from .const import (
     DEFAULT_MATCH_MIN_OVERLAP,
     DOMAIN,
     PERIODS,
+    SUBENTRY_BATTERY,
 )
+from .batteries import BatteryManager
 from .coordinator import YasnoCoordinator
 from .power import PowerTracker
 from .store import SvitloStore
 
 _LOGGER = logging.getLogger(__name__)
 STATS_REFRESH = timedelta(minutes=5)
+
+
+def battery_signature(entry: ConfigEntry) -> frozenset:
+    """Identity of the configured batteries, to reload only when they change."""
+    return frozenset(
+        (sub.subentry_id, sub.title, repr(sorted(sub.data.items())))
+        for sub in entry.subentries.values()
+        if sub.subentry_type == SUBENTRY_BATTERY
+    )
 
 
 class SvitloRuntime:
@@ -43,6 +54,8 @@ class SvitloRuntime:
         self.coordinator: YasnoCoordinator
         self.power: PowerTracker
         self.stats: dict[str, stats.Result] = {}
+        self.batteries: dict[str, BatteryManager] = {}
+        self.battery_signature = battery_signature(entry)
         self._unsubs: list[CALLBACK_TYPE] = []
 
     # ------------------------------------------------------------------ helpers
@@ -108,6 +121,11 @@ class SvitloRuntime:
         await self.coordinator.async_config_entry_first_refresh()
         self.power.async_start()
         self.refresh_stats()
+        for sub in self.entry.subentries.values():
+            if sub.subentry_type == SUBENTRY_BATTERY:
+                manager = BatteryManager(self.hass, self.entry, sub)
+                self.batteries[sub.subentry_id] = manager
+                await manager.async_start()
         self._unsubs.append(self.coordinator.async_add_listener(self.changed))
         self._unsubs.append(
             async_track_time_interval(self.hass, self._periodic, STATS_REFRESH)
@@ -117,6 +135,9 @@ class SvitloRuntime:
         for unsub in self._unsubs:
             unsub()
         self._unsubs.clear()
+        for manager in self.batteries.values():
+            await manager.async_stop()
+        self.batteries.clear()
         self.power.async_stop()
         await self.coordinator.async_shutdown()
         await self.store.async_save()
